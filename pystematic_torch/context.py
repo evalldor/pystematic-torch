@@ -6,19 +6,6 @@ logger = logging.getLogger('pystematic.torch')
 
 
 class TorchContext:
-    """A context object is like a big container that holds all pytorch related
-    objects you need. Its main use is to allow a pytorch session to transition
-    seamlessly between different modes (e.g. distributed, cuda) based on
-    experiment parameters. It does this by transparently transforming some
-    objects that you add. For example, when running in distributed mode, all
-    pytorch models added to this context will be automatically wrapped in 
-    torch's :obj:`DistributedDataParallel`.
-
-    The methods :meth:`state_dict` and :meth:`load_state_dict` provides a single
-    point of entry to the state of the entire session (provided that all objects
-    are registered with it).
-
-    """
 
     def cuda(self):
         raise NotImplementedError()
@@ -161,7 +148,7 @@ class TorchContext:
 
 
 class ContextObject(TorchContext):
-    
+
     def __init__(self):
         object.__setattr__(self, "_items", {})
 
