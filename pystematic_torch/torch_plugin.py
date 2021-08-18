@@ -13,7 +13,7 @@ import pystematic as ps
 
 logger = logging.getLogger('pystematic.torch')
 
-class TorchPlugin(core.PystematicPlugin):
+class TorchPlugin:
 
     def __init__(self, app) -> None:
         self.api_object = TorchApi()

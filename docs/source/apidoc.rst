@@ -54,15 +54,15 @@ point of entry to the state of the entire session (provided that all objects
 are registered with it).
 
 .. autoclass:: pystematic.torch.ContextObject
-    :members: has, cuda, cpu, ddp, state_dict, load_state_dict
+    :members: has, cuda, cpu, ddp, state_dict, load_state_dict, autotransform
     :undoc-members:
 
 .. autoclass:: pystematic.torch.ContextDict
-    :members: items, keys, values, cuda, cpu, ddp, state_dict, load_state_dict
+    :members: items, keys, values, cuda, cpu, ddp, state_dict, load_state_dict, autotransform
     :undoc-members:
 
 .. autoclass:: pystematic.torch.ContextList
-    :members: insert, append, cuda, cpu, ddp, state_dict, load_state_dict
+    :members: insert, append, cuda, cpu, ddp, state_dict, load_state_dict, autotransform
     :undoc-members:
 
 Other

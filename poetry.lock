@@ -124,7 +124,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 name = "importlib-metadata"
 version = "4.6.4"
 description = "Read metadata from Python packages"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -269,15 +269,17 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "pystematic"
-version = "0.9.0"
+version = "1.0.0"
 description = "A framework that helps you setup and run reproducible experiments in python."
 category = "main"
 optional = false
 python-versions = ">=3.6,<4.0"
 
 [package.dependencies]
-PyYAML = ">=5.3.1,<6.0.0"
-rich = ">=10.1.0,<11.0.0"
+importlib-metadata = ">=4.6.4,<5.0.0"
+PyYAML = ">=5.4.1,<6.0.0"
+rich = ">=10.7.0,<11.0.0"
+typing-extensions = ">=3.10.0,<4.0.0"
 wrapt = ">=1.12.1,<2.0.0"
 
 [[package]]
@@ -596,7 +598,7 @@ python-versions = "*"
 name = "zipp"
 version = "3.5.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -607,7 +609,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "f182cc19cbe2d8bb7b94cfcda02a3cc907875c4cd3875763c2c74ca3c789e2cf"
+content-hash = "c0561ba4fe25219f38ecdbfa2d0f512c4b700fdbf35432d79f530e48ca7f394a"
 
 [metadata.files]
 alabaster = [
@@ -904,7 +906,7 @@ pyparsing = [
     {file = "pyparsing-2.4.7.tar.gz", hash = "sha256:c203ec8783bf771a155b207279b9bccb8dea02d8f0c9e5f8ead507bc3246ecc1"},
 ]
 pystematic = [
-    {file = "pystematic-0.9.0-py3-none-any.whl", hash = "sha256:16da35588c3c8fc8e110601ce9d17a6fc32609f1afd5edcaeb678107cc92b347"},
+    {file = "pystematic-1.0.0-py3-none-any.whl", hash = "sha256:3f441ce09c09ae64b1543b9a0a62adfdd3653300c0c8ae8b5b570ab0aafcfc5d"},
 ]
 pytest = [
     {file = "pytest-5.4.3-py3-none-any.whl", hash = "sha256:5c0db86b698e8f170ba4582a492248919255fcd4c79b1ee64ace34301fb589a1"},
