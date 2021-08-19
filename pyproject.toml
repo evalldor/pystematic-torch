@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pystematic-torch"
-version = "0.1.1"
+version = "0.1.2"
 description = "Pystematic plugin for running pytorch experiments."
 repository = "https://github.com/evalldor/pystematic-torch"
 documentation = ""
