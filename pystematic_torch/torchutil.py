@@ -35,7 +35,7 @@ class DistributedSampler(torch.utils.data.distributed.Sampler):
         return self.num_samples
 
 
-def create_sampler(dataset, shuffle=True, seed=0):
+def create_sampler(dataset, shuffle=True, seed=None):
     """Returns a DistributedSampler if running in distributed mode, otherwise a normal sampler
 
     Args:
@@ -52,7 +52,8 @@ def create_sampler(dataset, shuffle=True, seed=0):
 
     if shuffle:
         g = torch.Generator()
-        g.manual_seed(seed)
+        if seed is not None:
+            g.manual_seed(seed)
         return torch.utils.data.RandomSampler(data_source=dataset, generator=g)
     
     return torch.utils.data.SequentialSampler(data_source=dataset)
@@ -72,7 +73,8 @@ class BetterDistributedSampler(torch.utils.data.distributed.DistributedSampler):
 
 
 class BetterDataLoader(torch.utils.data.DataLoader):
-    """ Implements a dataloader data works consistently in both distributed and nondistributed runtimes
+    """Implements a dataloader data works consistently in both distributed and
+    nondistributed runtimes.
     """
     def __init__(self, dataset, shuffle=False, random_seed=0, **kwargs):
         super().__init__(dataset, sampler=create_sampler(dataset, shuffle, random_seed), **kwargs)
