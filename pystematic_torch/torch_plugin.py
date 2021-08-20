@@ -1,17 +1,16 @@
 import logging
 import pathlib
+
+import pystematic as ps
+import pystematic.core as core
 import torch
 import tqdm
 
-from . import utils
+from . import context, recording, torchutil, utils
 
-from . import context, recording, torchutil
-
-import pystematic.core as core
-
-import pystematic as ps
 
 logger = logging.getLogger('pystematic.torch')
+
 
 class TorchPlugin:
 
@@ -21,7 +20,6 @@ class TorchPlugin:
         app.on_experiment_created(self.experiment_created)
         app.on_before_experiment(self.api_object._before_experiment)
        
-
         self.extend_api(app.get_api_object())
     
     def experiment_created(self, experiment):
@@ -34,7 +32,6 @@ class TorchPlugin:
 
     def extend_api(self, api_object):
         setattr(api_object, "torch", self.api_object)
-
 
 
 class TorchApi:

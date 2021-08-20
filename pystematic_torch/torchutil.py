@@ -63,7 +63,7 @@ class BetterDistributedSampler(torch.utils.data.distributed.DistributedSampler):
     """This class extends torch's default DistributedSampler but removes the need
     for manually calling the set_epoch method to reseed the random sampler
     """
-    def __init__(self, dataset, shuffle=True, seed=0):
+    def __init__(self, dataset, shuffle=True, seed=None):
         super().__init__(dataset, shuffle=shuffle, seed=seed)
         self.epoch = 0
 
@@ -76,5 +76,5 @@ class BetterDataLoader(torch.utils.data.DataLoader):
     """Implements a dataloader data works consistently in both distributed and
     nondistributed runtimes.
     """
-    def __init__(self, dataset, shuffle=False, random_seed=0, **kwargs):
+    def __init__(self, dataset, shuffle=False, random_seed=None, **kwargs):
         super().__init__(dataset, sampler=create_sampler(dataset, shuffle, random_seed), **kwargs)
