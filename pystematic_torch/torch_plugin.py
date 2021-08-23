@@ -169,8 +169,7 @@ pytorch_params = [
     core.Parameter(
         name="checkpoint",
         type=pathlib.Path,
-        help="Load context from checkpoint.",
-        allow_from_file=False
+        help="Load context from checkpoint."
     ),
     core.Parameter(
         name="cuda",
@@ -181,7 +180,6 @@ pytorch_params = [
         name="distributed",
         help="Launch in distributed mode.",
         default=False,
-        allow_from_file=False,
         is_flag=True
     ),
     core.Parameter(
@@ -209,7 +207,6 @@ pytorch_params = [
         type=int, 
         default=0,
         help="The rank of the node for multi-node distributed training.",
-        allow_from_file=False,
     ),
     core.Parameter(
         name="nnodes", 

@@ -23,6 +23,7 @@ tensorboardX = "^2.4"
 torch = "^1.8"
 matplotlib = "^3.0"
 pystematic = "^1.0.0"
+importlib-metadata = "^4.6.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
