@@ -159,9 +159,7 @@ class TorchApi:
         if torch.distributed.is_initialized():
             torch.distributed.barrier()
 
-    ContextObject = context.ContextObject
-    ContextDict = context.ContextDict
-    ContextList = context.ContextList
+    TorchContext = context.TorchContext
     Recorder = recording.Recorder
     BetterDataLoader = torchutil.BetterDataLoader
 

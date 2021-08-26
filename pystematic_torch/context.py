@@ -8,7 +8,7 @@ logger = logging.getLogger('pystematic.torch')
 
 
 
-class TorchContext:
+class BaseContext:
 
     def cuda(self):
         """Moves the context to a local cuda device.
@@ -82,7 +82,7 @@ class TorchContext:
         return self._move_to_device(item, "cpu")
 
     def _to_ddp(self, name, item):
-        if isinstance(item, TorchContext):
+        if isinstance(item, BaseContext):
             item.ddp()
 
         elif isinstance(item, torch.nn.Module):
@@ -334,7 +334,7 @@ def _to_distributed_data_parallel(item):
         return item
 
 
-class ContextObject(TorchContext):
+class ContextObject(BaseContext):
 
     def __init__(self):
         object.__setattr__(self, "_items", {})
@@ -386,7 +386,7 @@ class ContextObject(TorchContext):
                 self._items[name] = self._set_state_dict(self._items[name], item_state)
             
 
-class ContextDict(TorchContext):
+class ContextDict(BaseContext):
     
     def __init__(self):
         object.__setattr__(self, "_items", {})
@@ -441,7 +441,7 @@ class ContextDict(TorchContext):
                 self._items[name] = self._set_state_dict(self._items[name], item)
             
 
-class ContextList(TorchContext):
+class ContextList(BaseContext):
     
     def __init__(self):
         object.__setattr__(self, "_items", [])
@@ -495,7 +495,7 @@ class ContextList(TorchContext):
             self._items[i] = self._set_state_dict(self._items[i], item)
 
 
-class ContextObject2:
+class TorchContext:
    
     def state_dict(self) -> dict:
         """Returns the whole state of the context by iterating all registered

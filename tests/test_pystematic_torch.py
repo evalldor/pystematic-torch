@@ -20,7 +20,7 @@ def test_main_function_is_run():
 
 
 def test_move_context_from_cpu_to_cuda():
-    pass
+    ctx = pystematic.torch.TorchContext()
 
 
 def test_move_context_from_cuda_to_ddp():
