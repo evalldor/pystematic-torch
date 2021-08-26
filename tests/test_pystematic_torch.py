@@ -1,6 +1,7 @@
 import pytest
 import pystematic
 
+
 def test_main_function_is_run():
 
     class CustomException(Exception):
@@ -18,4 +19,13 @@ def test_main_function_is_run():
         exp.run({})
 
 
+def test_move_context_from_cpu_to_cuda():
+    pass
 
+
+def test_move_context_from_cuda_to_ddp():
+    pass
+
+
+def test_context_state_dict():
+    pass
