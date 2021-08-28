@@ -61,7 +61,8 @@ class Recorder:
 
     @property
     def count(self) -> int:
-        """Internal counter that represents the x-axis when logging data.
+        """Counter that represents the x-axis when logging data. You can assign
+        a value to this property or call :meth:`step` to increase the counter.
         """
         return self._counter
 
@@ -78,6 +79,11 @@ class Recorder:
             backend.step()
 
     def params(self, params_dict):
+        """Logs a parameter dict.
+
+        Args:
+            params_dict (dict): dict of param values.
+        """
         for backend in self._recording_backends:
             backend.params(params_dict)
 
@@ -123,11 +129,21 @@ class Recorder:
             backend.image(tag, image, self.count)
 
     def state_dict(self):
+        """Returns the state of the recorder, which consists of the counter :attr:`count`.
+
+        Returns:
+            dict: The state dict
+        """
         return {
             "count": self.count
         }
     
     def load_state_dict(self, state):
+        """Loads a state dict
+
+        Args:
+            state (dict): The state dict to load.
+        """
         self._counter = state["count"]
 
 

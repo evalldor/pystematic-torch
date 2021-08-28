@@ -180,26 +180,47 @@ def _to_distributed_data_parallel(item):
 
 class Context:
     """
-        Some added objects will be wrapped in proxy objects. While this should
-        not affect their use, it may be good to know when troubleshooting.
 
-        parameters:
-            cuda, checkpoint, distributed
+    The :meth:`autotransform` method uses the parameters ``cuda``,
+    ``distributed``, ``checkpoint`` to automatically determine how the context
+    should be transformed. 
     
-        torch.nn.Module: 
-            cuda: moved to torch.cuda.current_device()
-            cpu: moved to cpu
-            ddp: Gets wrapped in torch.nn.parallel.DistributedDataParallel on torch.cuda.current_device()
-        
-        pystematic.torch.Recorder:
-            ddp: gets silenced on non master processes
+    The following list specifies the transformations applied to each type of
+    object:
 
-        torch.optim.Optimizer:
-            cuda, cpu, ddp: FAIL! Add the optimizer after moving the context.
+    :obj:`torch.nn.Module`: 
 
-        torch.utils.data.DataLoader:
-            loading bar is displayed when iterating
-            items yielded from iterator are moved to correct device
+    * cuda: moved to ``torch.cuda.current_device()``
+    * cpu: moved to cpu
+    * ddp: Gets wrapped in ``torch.nn.parallel.DistributedDataParallel`` and
+      then in an object proxy, that delegates all non-existing ``getattr()``
+      calls to the underlying module. This means that you should be able to use
+      any custom attributes and methods on the module, even after it get wrapped
+      in the DDP module.
+    
+    :obj:`torch.optim.Optimizer`:
+
+    * cuda, cpu, ddp: If an optimizer instance is encounterd any of these call
+      will raise an exception. The reason is that optimizers needs to be
+      initialized *after* the parameters have been placed on the correct.
+
+    :obj:`pystematic.torch.Recorder`:
+
+    * ddp: gets silenced on non master processes
+
+    :obj:`pystematic.torch.SmartDataLoader`:
+
+    * cuda, cpu: Moves the dataloader to the proper device. If you initialize
+      the dataloader with ``move_output = True``, the items yielded when
+      iterating the dataloader are moved to the correct device.
+
+    Any object with a method named ``to()`` (such as :obj:`torch.Tensor`):
+
+    * cuda, cpu, ddp: call the ``to()`` method with the device to move the
+      object to.
+
+    All other types of objects are left unchanged.
+
     """
 
     def __call__(self, 
@@ -277,11 +298,13 @@ class Context:
         
         return self
 
+
 class SmartDataLoader(torch.utils.data.DataLoader):
-    """
-        torch.utils.data.DataLoader:
-            loading bar is displayed when iterating
-            items yielded from iterator are moved to correct device
+    """Extends the :obj:`torch.utils.data.DataLoader` with the following:
+        
+        * A loading bar is displayed when iterating the dataloader.
+        * The items yielded when iterating are moved to the device previously
+          set with :meth:`to`.
     """
 
     def __init__(self, dataset, shuffle=False, random_seed=None, move_output=True, loading_bar=True, **kwargs):
@@ -291,6 +314,11 @@ class SmartDataLoader(torch.utils.data.DataLoader):
         self._device = None
 
     def to(self, device):
+        """Sets the device that yielded items should be placed on.
+
+        Args:
+            device (str, torch.Device): The device to move the items to.
+        """
         self._device = device
         return self
 
@@ -310,6 +338,7 @@ class SmartDataLoader(torch.utils.data.DataLoader):
 
         else:
             yield from iterable
+
 
 def create_sampler(dataset, shuffle=True, seed=None):
     """Returns a DistributedSampler if running in distributed mode, otherwise a normal sampler

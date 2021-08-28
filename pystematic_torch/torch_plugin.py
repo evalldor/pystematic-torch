@@ -47,12 +47,13 @@ class TorchApi:
         element and moving them to the proper device if possible. Unrecognized
         objects will be left as is.
 
+
         Args:
             device (str, torch.Device): The device to move to
-            *args (any): any args that you want to move
+            *args (any): Any objects that you want to move
 
         Returns:
-            *args: The moved objects
+            any: The moved objects
         """
         
         if len(args) == 1:
@@ -176,7 +177,7 @@ class TorchApi:
 
     def get_rank(self) -> int:
         """Returns the global rank of the current process. If the current
-        process is not currently running distributed mode, it always return 0.
+        process is not currently running in distributed mode, it always return 0.
         In single node training the rank is the same as the local rank.
 
         Returns:
@@ -200,7 +201,7 @@ class TorchApi:
 
     def distributed_barrier(self) -> None:
         """Alias for ``torch.distributed.barrier()``. In non-distributed mode,
-        this just returns.
+        this is a noop.
         """
         if torch.distributed.is_initialized():
             torch.distributed.barrier()

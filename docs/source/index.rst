@@ -75,6 +75,42 @@ optimizers, epoch counter etc. You can then transition your session with the
 You can also serialize and restore the state of the entire session with the
 :meth:`Context.state_dict` and :meth:`Context.load_state_dict` methods.
 
+Here is a short example showing how the Context may be used:
+
+.. code-block:: python
+
+    import pystematic
+
+    ctx = pystematic.torch.TorchContext()
+
+    ctx.model = torch.nn.Sequential(
+        torch.nn.Linear(2, 1),
+        torch.nn.Sigmoid()
+    )
+    
+    # We use the smart dataloader so that batches are moved to the correct
+    # device
+    ctx.dataloader = pystematic.torch.SmartDataLoader(
+        dataset=Dataset(),
+        batch_size=2
+    )
+    ctx.loss_function = torch.nn.BCELoss()
+
+    ctx.cuda() # Move everything to cuda
+
+    # Remember to initialize the optimizer after moving
+    ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
+
+    for input, lbl in ctx.dataloader:
+
+        output = ctx.model(input)
+        
+        loss = ctx.loss_function(output, lbl)
+
+        ctx.optimzer.zero_grad()
+        loss.backward()
+        ctx.optimzer.step()
+
 
 .. autoclass:: pystematic.torch.Context
     :members: cuda, cpu, ddp, state_dict, load_state_dict, autotransform
@@ -85,9 +121,12 @@ Other
 -----
 
 .. autoclass:: pystematic.torch.Recorder
+    :members: count, step, params, scalar, figure, image, state_dict, load_state_dict
+    :undoc-members:
 
 .. autoclass:: pystematic.torch.SmartDataLoader
-
+    :members: to
+    :undoc-members:
 
 Default parameters
 ==================
