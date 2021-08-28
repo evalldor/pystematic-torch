@@ -1,18 +1,11 @@
-A `pystematic <https://github.com/evalldor/pystematic>`_ plugin for running
-experiments in pytorch. 
+This is an extension to `pystematic <https://github.com/evalldor/pystematic>`_
+that adds functionality related to running machine learning experiments in
+pytorch. Its main contribution is the ``Context`` object and related classes.
+Which provides an easy way to manage all pytorch related objects.
 
-This is an extension to pystematic that adds functionality related to running
-machine learning experiments in pytorch. Its main contribution is the
-``ContextObject`` and related classes. Which provides an easy way to manage all
-pytorch related objects.
-
-Documentation is in the works.
-
-Quickstart
-==========
 
 Installation
-------------
+============
 
 All you have to do for pystematic to find the plugin is to install it:
 
@@ -21,24 +14,63 @@ All you have to do for pystematic to find the plugin is to install it:
     $ pip install pystematic-torch
 
 
-Context objects
----------------
+Example
+=======
 
-When you are developing a model in pytorch, you often want to be able to train
-the model in many different settings, such as multi-node distributed, single gpu
-or even just on the cpu depending on your work location and on available
-resources. The main purpose of the context object is to allow you to transition
-seamlessly between these different modes of training, without changing your
-code. 
+Here's a small example that shows how using the ``Context`` object,
+``SmartDataLoader`` and ``Recorder`` simplifies setting up and running a
+training session in pytorch.
 
-If you are familiar with the ``torch.nn.Module`` object, you know that whenever
-you add a paramater to the object, it gets registered with it, and when you want
-to move the model to another device, you simply call ``module.cuda()`` or
-``module.cpu()`` to move all paramters registered with the module.
+.. code-block:: python
 
-A context object is like a torch module on steroids. You are meant to register
-every object important to your training session with it, e.g. models,
-optimizers, epoch counter etc. You can then transition your session with the
-``context.cpu()``, ``context.cuda()`` and ``context.ddp()`` methods. You can
-also serialize and restore the state of the entire session with the
-``context.state_dict()`` and ``context.load_state_dict()`` methods.
+    import pystematic
+    from pystematic import params
+
+    ctx = pystematic.torch.Context()
+    ctx.recorder = pystematic.torch.Recorder()
+
+    ctx.model = torch.nn.Sequential(
+        torch.nn.Linear(2, 1),
+        torch.nn.Sigmoid()
+    )
+    
+    # We use the smart dataloader so that batches are moved to the correct
+    # device
+    ctx.dataloader = pystematic.torch.SmartDataLoader(
+        dataset=Dataset(),
+        batch_size=2
+    )
+    ctx.loss_function = torch.nn.BCELoss()
+
+    ctx.cuda() # Move everything to cuda 
+    # ctx.ddp() # and maybe distributed data-parallel?
+
+    # Remember to initialize the optimizer after moving
+    ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
+
+    # Load checkpoint
+    ctx.load_state_dict(params["checkpoint"])
+
+    # Train one epoch
+    for input, lbl in ctx.dataloader:
+        # The smart dataloader makes sure the batch is placed on the correct device.
+        output = ctx.model(input)
+        
+        loss = ctx.loss_function(output, lbl)
+
+        ctx.optimzer.zero_grad()
+        loss.backward()
+        ctx.optimzer.step()
+
+        ctx.recorder.scalar("train/loss", loss)
+        ctx.recorder.step()
+
+    # Save checkpoint
+    pystematic.torch.save_checkpoint(ctx.state_dict(), id=1)
+
+
+Documentation
+=============
+
+Reference documentation is available at
+`<https://pystematic-torch.readthedocs.io>`_.

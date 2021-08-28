@@ -22,7 +22,7 @@ def test_main_function_is_run():
 
 
 def test_context_cpu():
-    ctx = pystematic.torch.TorchContext()
+    ctx = pystematic.torch.Context()
 
     ctx.model = torch.nn.Sequential(
         torch.nn.Linear(2, 1),
@@ -52,7 +52,7 @@ def test_context_cpu():
 
 
 def test_move_context_to_cuda():
-    ctx = pystematic.torch.TorchContext()
+    ctx = pystematic.torch.Context()
 
     ctx.model = torch.nn.Sequential(
         torch.nn.Linear(2, 1),
@@ -80,7 +80,7 @@ def test_move_context_to_cuda():
 
 
 def test_smart_dataloader():
-    ctx = pystematic.torch.TorchContext()
+    ctx = pystematic.torch.Context()
 
     ctx.model = torch.nn.Sequential(
         torch.nn.Linear(2, 1),
@@ -109,7 +109,7 @@ def test_smart_dataloader():
             ctx.optimzer.step()
 
 
-    ctx = pystematic.torch.TorchContext()
+    ctx = pystematic.torch.Context()
 
     ctx.model = torch.nn.Sequential(
         torch.nn.Linear(2, 1),
@@ -164,7 +164,7 @@ class Dataset:
 
 @pystematic.experiment
 def ddp_exp(params):
-    ctx = pystematic.torch.TorchContext()
+    ctx = pystematic.torch.Context()
 
     ctx.model = torch.nn.Sequential(
         torch.nn.Linear(2, 1),

@@ -26,6 +26,7 @@ Experiment API
 This plugin adds some API functionality under the ``pystematic.torch``
 namespace.
 
+
 General
 -------
 
@@ -53,8 +54,10 @@ Distributed
 
 .. autofunction:: pystematic.torch.distributed_barrier
 
+
 Context
 -------
+
 When you are developing a model in pytorch, you often want to be able to train
 the model in many different settings, such as multi-node distributed, single gpu
 or even just on the cpu depending on your work location and on available
@@ -127,6 +130,7 @@ Other
 .. autoclass:: pystematic.torch.SmartDataLoader
     :members: to
     :undoc-members:
+
 
 Default parameters
 ==================
