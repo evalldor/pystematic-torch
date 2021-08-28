@@ -3,47 +3,7 @@ import os
 import logging
 import multiprocessing
 
-import torch
-
-from rich.console import Console
-from rich.theme import Theme
-from rich.markup import escape
-
 logger = logging.getLogger('pystematic.torch')
-
-class PytorchLogHandler(logging.Handler):
-    """Handle logging for both single- and multiprocess contexts."""
-
-    def __init__(self, no_style=False):
-        super().__init__()
-        theme = Theme({
-            'debug':    'magenta',
-            'info':     'blue',
-            'warning':  'yellow',
-            'error':    'red',
-            'rank': "green",
-            'name': "green"
-
-        }, inherit=False)
-
-        if no_style:
-            theme = Theme({}, inherit=False)
-
-        self.console = Console(theme=theme)
-
-    def handle(self, record):
-        level_str = escape(f"[{record.levelname}]")
-        level = f"[{record.levelname.lower()}]{level_str}[/{record.levelname.lower()}]"
-        msg = f"{record.getMessage()}"
-
-        name = f"[name]\[{record.name}][/name]"
-
-        if torch.distributed.is_initialized():
-            rank = f"[rank][RANK {torch.distributed.get_rank()}][/rank]"
-            self.console.print(f"{level} {rank} {name} {msg}")
-        else:
-            self.console.print(f"{level} {name} {msg}")
-
 
 @contextlib.contextmanager
 def envvars(env):

@@ -38,7 +38,7 @@ to move the model to another device, you simply call ``module.cuda()`` or
 
 A context object is like a torch module on steroids. You are meant to register
 every object important to your training session with it, e.g. models,
-optimizers, epoch counter etc. This also gives the benefit of easily saving and
-restoring the state of your session.
-
-
+optimizers, epoch counter etc. You can then transition your session with the
+``context.cpu()``, ``context.cuda()`` and ``context.ddp()`` methods. You can
+also serialize and restore the state of the entire session with the
+``context.state_dict()`` and ``context.load_state_dict()`` methods.

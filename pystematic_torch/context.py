@@ -178,7 +178,7 @@ def _to_distributed_data_parallel(item):
     return item
 
 
-class TorchContext:
+class Context:
     """
         Some added objects will be wrapped in proxy objects. While this should
         not affect their use, it may be good to know when troubleshooting.

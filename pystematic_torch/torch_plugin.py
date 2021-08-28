@@ -6,7 +6,7 @@ import pystematic.core as core
 import torch
 import tqdm
 
-from . import context, recording, torchutil, utils
+from . import context, recording, utils
 
 
 logger = logging.getLogger('pystematic.torch')
@@ -37,88 +37,104 @@ class TorchPlugin:
 class TorchApi:
 
     def _before_experiment(self, experiment, params):
-        if params["debug"]:
-            log_level = "DEBUG"
-        else:
-            log_level = "INFO"
-
-        logging.basicConfig(level=log_level, handlers=[utils.PytorchLogHandler()], force=True)
         
         if params["distributed"]:
             self.init_distributed()
 
-    def place_on_correct_device(self, *args):
-        """Utility method to place a batch of data on the correct device (i.e.
-        cuda or cpu) depending on the 'cuda' experiment parameter."""
-        res = []
-        for arg in args:
-            if ps.params["cuda"] and callable(getattr(arg, "cuda", None)):
-                res.append(arg.cuda())
-            else:
-                res.append(arg)
-        return res
+    def move_to_device(self, device, *args):
+        """Utility method to place a batch of data on a specific device (i.e.
+        cuda or cpu). It handles nested dicts and lists by traversing every
+        element and moving them to the proper device if possible. Unrecognized
+        objects will be left as is.
 
-    def iterate(self, iterable):
-        """Returns a wrapper around the iterator that show a progessbar (tqdm).
-        The progessbar is silenced in non-master processes.
+        Args:
+            device (str, torch.Device): The device to move to
+            *args (any): any args that you want to move
+
+        Returns:
+            *args: The moved objects
+        """
+        
+        if len(args) == 1:
+            return context._move_to_device(args[0], device)
+        
+        return context._move_to_device(args, device)
+
+    def save_checkpoint(self, state_dict, id) -> None:
+        """Saves registered items to a file. All items that have a function
+        named ``state_dict`` will be saved by calling that function and saving
+        the returned value. This function will make sure to only save the
+        checkpoint in the master process when called in distributed mode.
+        
+
+        Args:
+            state_dict (dict): The state dict to save, such as the on returned from 
+                :meth:`Context.state_dict`
+            id (any): An id that uniquely identifies this checkpoint. E.g. epoch number, 
+                step number etc.
         """
 
         if self.is_master():
-            return tqdm.tqdm(iterable, leave=True)
-
-        return iterable
-
-    def save_checkpoint(self, ctx, filename) -> None:
-        """Saves registered items to a file. All items that have a function named
-        ``state_dict`` will be saved by calling that function and saving the
-        returned value. This function will make sure to only save the checkpoint in
-        the master process when called in distributed mode.
-        """
-
-        if self.is_master():
-            checkpoint_file_path = ps.output_dir.joinpath(filename)
+            checkpoint_file_path = ps.output_dir.joinpath(f"checkpoint-{id}.pt")
 
             logger.info(f"Saving checkpoint '{checkpoint_file_path}'.")
 
             with checkpoint_file_path.open("wb") as f:
-                torch.save(ctx.state_dict(), f)
+                torch.save(state_dict, f)
 
     def load_checkpoint(self, checkpoint_file_path) -> dict:
-        """Loads and returns a checkpoint from the given filepath."""
+        """Loads and returns a checkpoint from the given filepath.
+
+        Args:
+            checkpoint_file_path (str, pathlib.Path): Path to the file to load.
+
+        Returns:
+            dict: The loaded state dict.
+        """
         with open(checkpoint_file_path, "rb") as f:
             return torch.load(f, map_location="cpu")
 
     def run_parameter_sweep(self, experiment, list_of_params, max_num_processes=1, num_gpus_per_process=None) -> None:
-        """Runs an experiment with a set of different params. At most
-        :obj:`max_num_processes` concurrent processes will be used.
+        """Extends the :func:`pystematic.run_parameter_sweep` with GPU limiting capabilities.
+
+        Runs an experiment multiple times with a set of different params. At most
+        :obj:`max_num_processes` concurrent processes will be used. This call will block until 
+        all experiments have been run.
+
+        Args:
+            experiment (Experiment): The experiment to run.
+            list_of_params (list of dict): A list of parameter dictionaries. Each corresponding to 
+                one run of the experiment. See :func:`pystematic.param_matrix` for a convenient way 
+                of generating such a list.
+            max_num_processes (int, optional): The maximum number of concurrent processes to use 
+                for running the experiments. Defaults to 1.
+            num_gpus_per_process (int, optional): The number of GPUs to allocate for each experiment. 
+                If None no allocation is done. Default is None.
         """
 
         pool = utils.ProcessQueue(max_num_processes, range(torch.cuda.device_count()), num_gpus_per_process)
         pool.run_and_wait_for_completion(experiment, list_of_params)
 
     #
-    # Pytorch distributed data parallell
+    # Pytorch distributed data parallel
     #
 
     def init_distributed(self) -> None:
         """Initializes a distributed runtime. This function is called automatically 
         during initialization if the parameter ``distributed`` is set to ``True``.
         """
-        if ps.params["local_rank"] is None:
-            for i in range(1, ps.params["nproc_per_node"]):
-                ps.launch_subprocess(local_rank=i)
+        if not ps.is_subprocess():
+            for i in range(ps.params["nproc_per_node"]-1):
+                ps.launch_subprocess()
 
-            local_rank = 0
-        else:
-            local_rank = ps.params["local_rank"]
 
-        global_rank = ps.params["nproc_per_node"] * ps.params["node_rank"] + local_rank
+        global_rank = ps.params["nproc_per_node"] * ps.params["node_rank"] + ps.params["local_rank"]
         world_size = ps.params["nproc_per_node"] * ps.params["nnodes"]
 
         logger.debug(f"Initializing distributed runtime (world size '{world_size}', "
-                    f"local rank '{local_rank}', global rank '{global_rank}')...")
+                    f"local rank '{ps.params['local_rank']}', global rank '{global_rank}')...")
 
-        torch.cuda.set_device(local_rank)
+        torch.cuda.set_device(ps.params["local_rank"])
 
         torch.distributed.init_process_group(
             backend='nccl',
@@ -130,24 +146,51 @@ class TorchApi:
         logger.debug(f"Distributed runtime initialized.")
 
     def is_distributed(self) -> bool:
+        """Alias for ``torch.distributed.is_initialized()``. 
+
+        Returns:
+            bool: Returns true if torch distributed runtime is initialized.
+        """
         return torch.distributed.is_initialized()
 
     def is_master(self) -> bool:
+        """If running in distributed mode, returns whether of not this current
+        process is the master process. In non-distributed mode, always returns True.
+
+        Returns:
+            bool: Whether the current process is the master process.
+        """
         return not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0
 
     def get_num_processes(self) -> int:
+        """Alias for ``torch.distributed.get_world_size()``. In non-distributed
+        mode, this always returns 1.
+
+        Returns:
+            int: The total number of processes in the distributed runtime.
+        """
         if torch.distributed.is_initialized():
             return torch.distributed.get_world_size()
 
         return 1
 
     def get_rank(self) -> int:
+        """Returns the global rank of the current process. If the current
+        process is not currently running distributed mode, it always return 0.
+        In single node training the rank is the same as the local rank.
+
+        Returns:
+            int: The rank of the current process.
+        """
         if torch.distributed.is_initialized():
             return torch.distributed.get_rank()
 
         return 0
 
     def broadcast_from_master(self, value):
+        """Alias for ``torch.distributed.broadcast(value, 0)``. In
+        non-distributed mode, this just returns the value.
+        """
         value = torch.tensor(value)
 
         if torch.distributed.is_initialized():
@@ -156,10 +199,13 @@ class TorchApi:
         return value
 
     def distributed_barrier(self) -> None:
+        """Alias for ``torch.distributed.barrier()``. In non-distributed mode,
+        this just returns.
+        """
         if torch.distributed.is_initialized():
             torch.distributed.barrier()
 
-    TorchContext = context.TorchContext
+    Context = context.Context
     SmartDataLoader = context.SmartDataLoader
     Recorder = recording.Recorder
 
@@ -180,15 +226,6 @@ pytorch_params = [
         help="Launch in distributed mode.",
         default=False,
         is_flag=True
-    ),
-    core.Parameter(
-        name="local_rank", 
-        type=int,
-        help="For distributed training, gives the local rank for this process. "
-            "This parameter is set automatically by the framework, and should not "
-            "be used manually.",
-        allow_from_file=False,
-        hidden=True,
     ),
     core.Parameter(
         name="nproc_per_node",
