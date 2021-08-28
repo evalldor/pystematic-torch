@@ -142,7 +142,8 @@ def test_smart_dataloader():
 def test_move_context_to_ddp():
     ddp_exp.run({
         "distributed": True,
-        "nproc_per_node": 2
+        "nproc_per_node": 2,
+        "checkpoint": "tests/resources/checkpoint-1.pt"
     })
 
 
@@ -165,30 +166,45 @@ class Dataset:
 @pystematic.experiment
 def ddp_exp(params):
     ctx = pystematic.torch.Context()
+    ctx.recorder = pystematic.torch.Recorder()
 
     ctx.model = torch.nn.Sequential(
         torch.nn.Linear(2, 1),
         torch.nn.Sigmoid()
     )
+
+    # We use the smart dataloader so that batches are moved to the correct
+    # device
     ctx.dataloader = pystematic.torch.SmartDataLoader(
         dataset=Dataset(),
         batch_size=2
     )
     ctx.loss_function = torch.nn.BCELoss()
 
-    ctx.cuda()
-    ctx.ddp()
+    ctx.cuda() # Move everything to cuda
+    ctx.ddp() # and maybe distributed data-parallel?
 
+    # Remember to initialize the optimizer after moving
     ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
 
+    # Load checkpoint
+    ctx.load_state_dict(pystematic.torch.load_checkpoint(params["checkpoint"]))
 
+    # Train one epoch
     for input, lbl in ctx.dataloader:
-
+        # The smart dataloader makes sure the batch is placed on the correct device.
         output = ctx.model(input)
-        
+
         loss = ctx.loss_function(output, lbl)
 
         ctx.optimzer.zero_grad()
         loss.backward()
         ctx.optimzer.step()
+
+        ctx.recorder.scalar("train/loss", loss)
+        ctx.recorder.step()
+
+    # Save checkpoint
+    pystematic.torch.save_checkpoint(ctx.state_dict(), id=2)
+
 

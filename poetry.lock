@@ -122,7 +122,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "importlib-metadata"
-version = "4.6.4"
+version = "4.7.1"
 description = "Read metadata from Python packages"
 category = "main"
 optional = false
@@ -269,7 +269,7 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "pystematic"
-version = "1.0.0"
+version = "1.3.1"
 description = "A framework that helps you setup and run reproducible experiments in python."
 category = "main"
 optional = false
@@ -279,7 +279,7 @@ python-versions = ">=3.6,<4.0"
 importlib-metadata = ">=4.6.4,<5.0.0"
 PyYAML = ">=5.4.1,<6.0.0"
 rich = ">=10.7.0,<11.0.0"
-typing-extensions = ">=3.10.0,<4.0.0"
+typing-extensions = ">=3.7.4,<4.0.0"
 wrapt = ">=1.12.1,<2.0.0"
 
 [[package]]
@@ -352,7 +352,7 @@ use_chardet_on_py3 = ["chardet (>=3.0.2,<5)"]
 
 [[package]]
 name = "rich"
-version = "10.7.0"
+version = "10.8.0"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 category = "main"
 optional = false
@@ -527,7 +527,7 @@ typing-extensions = "*"
 
 [[package]]
 name = "tqdm"
-version = "4.62.1"
+version = "4.62.2"
 description = "Fast, Extensible Progress Meter"
 category = "main"
 optional = false
@@ -593,7 +593,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.2"
-content-hash = "b9921b211dc719aa39d82050f206d652d965af8a48c7b71414c28ab729c7b54c"
+content-hash = "b25ed21f5816f2f1c14f043f5e704df98205e8acaeb05f4fb0738195235e56d5"
 
 [metadata.files]
 alabaster = [
@@ -649,8 +649,8 @@ imagesize = [
     {file = "imagesize-1.2.0.tar.gz", hash = "sha256:b1f6b5a4eab1f73479a50fb79fcf729514a900c341d8503d62a62dbc4127a2b1"},
 ]
 importlib-metadata = [
-    {file = "importlib_metadata-4.6.4-py3-none-any.whl", hash = "sha256:ed5157fef23a4bc4594615a0dd8eba94b2bb36bf2a343fa3d8bb2fa0a62a99d5"},
-    {file = "importlib_metadata-4.6.4.tar.gz", hash = "sha256:7b30a78db2922d78a6f47fb30683156a14f3c6aa5cc23f77cc8967e9ab2d002f"},
+    {file = "importlib_metadata-4.7.1-py3-none-any.whl", hash = "sha256:9e04bf59076a15a9b6dd9c27806e8fcdf15280ba529c6a8cc3f4d5b4875bdd61"},
+    {file = "importlib_metadata-4.7.1.tar.gz", hash = "sha256:c4eb3dec5f697682e383a39701a7de11cd5c02daf8dd93534b69e3e6473f6b1b"},
 ]
 jinja2 = [
     {file = "Jinja2-3.0.1-py3-none-any.whl", hash = "sha256:1f06f2da51e7b56b8f238affdd6b4e2c61e39598a378cc49345bc1bd42a978a4"},
@@ -881,9 +881,13 @@ protobuf = [
     {file = "protobuf-3.17.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:2ae692bb6d1992afb6b74348e7bb648a75bb0d3565a3f5eea5bec8f62bd06d87"},
     {file = "protobuf-3.17.3-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:99938f2a2d7ca6563c0ade0c5ca8982264c484fdecf418bd68e880a7ab5730b1"},
     {file = "protobuf-3.17.3-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:6902a1e4b7a319ec611a7345ff81b6b004b36b0d2196ce7a748b3493da3d226d"},
+    {file = "protobuf-3.17.3-cp38-cp38-win32.whl", hash = "sha256:59e5cf6b737c3a376932fbfb869043415f7c16a0cf176ab30a5bbc419cd709c1"},
+    {file = "protobuf-3.17.3-cp38-cp38-win_amd64.whl", hash = "sha256:ebcb546f10069b56dc2e3da35e003a02076aaa377caf8530fe9789570984a8d2"},
     {file = "protobuf-3.17.3-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:4ffbd23640bb7403574f7aff8368e2aeb2ec9a5c6306580be48ac59a6bac8bde"},
     {file = "protobuf-3.17.3-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:26010f693b675ff5a1d0e1bdb17689b8b716a18709113288fead438703d45539"},
     {file = "protobuf-3.17.3-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:e76d9686e088fece2450dbc7ee905f9be904e427341d289acbe9ad00b78ebd47"},
+    {file = "protobuf-3.17.3-cp39-cp39-win32.whl", hash = "sha256:a38bac25f51c93e4be4092c88b2568b9f407c27217d3dd23c7a57fa522a17554"},
+    {file = "protobuf-3.17.3-cp39-cp39-win_amd64.whl", hash = "sha256:85d6303e4adade2827e43c2b54114d9a6ea547b671cb63fafd5011dc47d0e13d"},
     {file = "protobuf-3.17.3-py2.py3-none-any.whl", hash = "sha256:2bfb815216a9cd9faec52b16fd2bfa68437a44b67c56bee59bc3926522ecb04e"},
     {file = "protobuf-3.17.3.tar.gz", hash = "sha256:72804ea5eaa9c22a090d2803813e280fb273b62d5ae497aaf3553d141c4fdd7b"},
 ]
@@ -900,7 +904,7 @@ pyparsing = [
     {file = "pyparsing-2.4.7.tar.gz", hash = "sha256:c203ec8783bf771a155b207279b9bccb8dea02d8f0c9e5f8ead507bc3246ecc1"},
 ]
 pystematic = [
-    {file = "pystematic-1.0.0-py3-none-any.whl", hash = "sha256:3f441ce09c09ae64b1543b9a0a62adfdd3653300c0c8ae8b5b570ab0aafcfc5d"},
+    {file = "pystematic-1.3.1-py3-none-any.whl", hash = "sha256:e1e59c7d99c8d400f2ea59f7b75a30e5a994b320cb02fef71d9d26c83cac8614"},
 ]
 pytest = [
     {file = "pytest-5.4.3-py3-none-any.whl", hash = "sha256:5c0db86b698e8f170ba4582a492248919255fcd4c79b1ee64ace34301fb589a1"},
@@ -942,8 +946,8 @@ requests = [
     {file = "requests-2.26.0.tar.gz", hash = "sha256:b8aa58f8cf793ffd8782d3d8cb19e66ef36f7aba4353eec859e74678b01b07a7"},
 ]
 rich = [
-    {file = "rich-10.7.0-py3-none-any.whl", hash = "sha256:517b4e0efd064dd1fe821ca93dd3095d73380ceac1f0a07173d507d9b18f1396"},
-    {file = "rich-10.7.0.tar.gz", hash = "sha256:13ac80676e12cf528dc4228dc682c8402f82577c2aa67191e294350fa2c3c4e9"},
+    {file = "rich-10.8.0-py3-none-any.whl", hash = "sha256:ee7b497a8d68d7c6dcac85fae5f847307b06de9ed1741ba8b8837a9096b847b4"},
+    {file = "rich-10.8.0.tar.gz", hash = "sha256:4010222215d7c6e3ae75442c1395c7a6a36b803603e21290f5e1c0651695ee3f"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
@@ -1010,8 +1014,8 @@ torch = [
     {file = "torch-1.9.0-cp39-none-macosx_11_0_arm64.whl", hash = "sha256:569ead6ae6bb0e636df0fc8af660ef03260e630dc5f2f4cf3198027e7b6bb481"},
 ]
 tqdm = [
-    {file = "tqdm-4.62.1-py2.py3-none-any.whl", hash = "sha256:07856e19a1fe4d2d9621b539d3f072fa88c9c1ef1f3b7dd4d4953383134c3164"},
-    {file = "tqdm-4.62.1.tar.gz", hash = "sha256:35540feeaca9ac40c304e916729e6b78045cbbeccd3e941b2868f09306798ac9"},
+    {file = "tqdm-4.62.2-py2.py3-none-any.whl", hash = "sha256:80aead664e6c1672c4ae20dc50e1cdc5e20eeff9b14aa23ecd426375b28be588"},
+    {file = "tqdm-4.62.2.tar.gz", hash = "sha256:a4d6d112e507ef98513ac119ead1159d286deab17dffedd96921412c2d236ff5"},
 ]
 typing-extensions = [
     {file = "typing_extensions-3.10.0.0-py2-none-any.whl", hash = "sha256:0ac0f89795dd19de6b97debb0c6af1c70987fd80a2d62d1958f7e56fcc31b497"},
