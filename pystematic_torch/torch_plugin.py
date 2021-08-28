@@ -1,17 +1,16 @@
 import logging
 import pathlib
+
+import pystematic as ps
+import pystematic.core as core
 import torch
 import tqdm
 
-from . import utils
+from . import context, recording, torchutil, utils
 
-from . import context, recording, torchutil
-
-import pystematic.core as core
-
-import pystematic as ps
 
 logger = logging.getLogger('pystematic.torch')
+
 
 class TorchPlugin:
 
@@ -21,7 +20,6 @@ class TorchPlugin:
         app.on_experiment_created(self.experiment_created)
         app.on_before_experiment(self.api_object._before_experiment)
        
-
         self.extend_api(app.get_api_object())
     
     def experiment_created(self, experiment):
@@ -34,7 +32,6 @@ class TorchPlugin:
 
     def extend_api(self, api_object):
         setattr(api_object, "torch", self.api_object)
-
 
 
 class TorchApi:
@@ -162,18 +159,16 @@ class TorchApi:
         if torch.distributed.is_initialized():
             torch.distributed.barrier()
 
-    ContextObject = context.ContextObject
-    ContextDict = context.ContextDict
-    ContextList = context.ContextList
+    TorchContext = context.TorchContext
+    SmartDataLoader = context.SmartDataLoader
     Recorder = recording.Recorder
-    BetterDataLoader = torchutil.BetterDataLoader
+
 
 pytorch_params = [
     core.Parameter(
         name="checkpoint",
         type=pathlib.Path,
-        help="Load context from checkpoint.",
-        allow_from_file=False
+        help="Load context from checkpoint."
     ),
     core.Parameter(
         name="cuda",
@@ -184,7 +179,6 @@ pytorch_params = [
         name="distributed",
         help="Launch in distributed mode.",
         default=False,
-        allow_from_file=False,
         is_flag=True
     ),
     core.Parameter(
@@ -212,7 +206,6 @@ pytorch_params = [
         type=int, 
         default=0,
         help="The rank of the node for multi-node distributed training.",
-        allow_from_file=False,
     ),
     core.Parameter(
         name="nnodes", 
@@ -226,18 +219,16 @@ pytorch_params = [
         default="127.0.0.1",
         envvar="MASTER_ADDR",
         type=str,
-        help="Master node (rank 0)'s address, should be either "
-            "the IP address or the hostname of node 0. Leave "
-            "default for single node training.",
+        help="The master node's (rank 0) IP address or the hostname. "
+            "Leave default for single node training.",
     ),
     core.Parameter(
         name="master_port", 
         default=29500, 
         envvar="MASTER_PORT",
         type=int,
-        help="Master node (rank 0)'s free port that needs to "
-            "be used for communciation during distributed "
-            "training.",
+        help="The master node's (rank 0) port used for "
+            "communciation during distributed training.",
     ),
 ]
 

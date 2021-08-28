@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pystematic-torch"
-version = "0.1.2"
+version = "1.0.0"
 description = "Pystematic plugin for running pytorch experiments."
 repository = "https://github.com/evalldor/pystematic-torch"
 documentation = ""
@@ -23,6 +23,8 @@ tensorboardX = "^2.4"
 torch = "^1.8"
 matplotlib = "^3.0"
 pystematic = "^1.0.0"
+importlib-metadata = "^4.6.4"
+wrapt = "^1.12.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

@@ -1,29 +1,269 @@
-import torch
 import logging
+
+import torch
+import wrapt
+import tqdm
+
 from .recording import Recorder
+
 logger = logging.getLogger('pystematic.torch')
 
 
+class DDPModuleProxy(wrapt.ObjectProxy):
+    """Delegates any unknown getattr calls to the underlying module. Makes the
+    DDP module completely transparent.
+    """
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.__wrapped__.module, name)
+
+    def __call__(self, *args, **kwargs):
+        return self.__wrapped__(*args, **kwargs)
+
+
+def _move_to_same_device_as(to_move, target):
+    if hasattr(target, "device"):
+        return _move_to_device(to_move, target.device)
+
+    elif callable(getattr(target, "parameters", None)): # torch modules
+        try:
+            return _move_to_device(to_move, next(target.parameters()).device)
+        except StopIteration:
+            pass
+
+    return to_move
+
+
+def _move_to_device(obj, device):
+    if callable(getattr(obj, "to", None)):
+        return obj.to(device=device)
+
+    if isinstance(obj, torch.optim.Optimizer):
+        raise Exception("Instances of 'torch.optim.Optimizer' cannot be moved! "
+                        "You have to manually reinitialize the optimizer after moving!")
+
+    if isinstance(obj, dict):
+        res = {}
+        for name, value in obj.items():
+            res[name] = _move_to_device(value, device)
+        
+        return res
+
+    if isinstance(obj, (list, tuple)):
+        res = []
+        for i, sub_item in enumerate(obj):
+            res.append(_move_to_device(sub_item, device))
+        
+        return res
+
+    return obj
+
+
+def _get_state_dict(item):
+
+    if callable(getattr(item, "state_dict", None)):
+        if isinstance(item, torch.nn.parallel.DistributedDataParallel):
+            return item.module.state_dict()
+        else:
+            return item.state_dict()
+    
+    if isinstance(item, (int, float, complex, str)):
+        return item
+
+    if isinstance(item, dict):
+        res = {}
+
+        for name, sub_item in item.items():
+            res[name] = _get_state_dict(sub_item)
+
+        return res
+
+    if isinstance(item, (list, tuple)):
+        res = []
+
+        for sub_item in item:
+            res.append(_get_state_dict(sub_item))
+
+        return res
+
+    return None
+
+
+def _set_state_dict(item, state, path=[]):
+
+    if callable(getattr(item, "load_state_dict", None)):
+        if isinstance(item, torch.nn.parallel.DistributedDataParallel):
+            item.module.load_state_dict(_move_to_same_device_as(state, item.module))
+        else:
+            item.load_state_dict(_move_to_same_device_as(state, item))
+        
+        return item
+
+    if isinstance(item, (int, float, complex, str)):
+        if isinstance(state, (int, float, complex, str)):
+            raise ValueError(f"Error when setting state for item '{'.'.join(path)}', "
+                             f"expected a primitive value, got '{type(state)}'.")
+
+        return state
+
+    if isinstance(item, dict):
+        if not isinstance(state, dict):
+            raise ValueError(f"Error when setting state for item '{'.'.join(path)}', "
+                             f"expected a dict, got '{type(state)}'.")
+
+        res = {}
+
+        for name, sub_item in item.items():
+            if name in state:
+                res[name] = _set_state_dict(sub_item, state[name], path + [name])
+            else:
+                raise ValueError(f"Error when setting state for item '{'.'.join(path)}', "
+                                 f"key '{name}' was not found in state.")
+
+        return res
+
+    if isinstance(item, (list, tuple)):
+        if not isinstance(state, (list, tuple)):
+            raise ValueError(f"Error when setting state for item '{'.'.join(path)}', "
+                             f"expected a list, got '{type(state)}'")
+
+        if len(item) != len(state):
+            raise ValueError(f"Error when setting state for item '{'.'.join(path)}', "
+                             f"expected a list of length '{len(item)}', got one of length '{len(state)}'.")
+        
+        res = []
+
+        for i, sub_item in enumerate(item):
+            res.append(_set_state_dict(sub_item, state[i], path + [str(i)]))
+
+        return res
+
+    if state is not None:
+        raise ValueError(f"Error when setting state for item '{'.'.join(path)}', "
+                         f"expected None, got '{type(state)}'")
+
+    return item
+
+
+def _to_distributed_data_parallel(item):
+    if callable(getattr(item, "ddp", None)):
+        return item.ddp()
+
+    if isinstance(item, torch.nn.Module):
+        if any([p.requires_grad for p in item.parameters()]):
+            logger.debug(f"Converting to distributed for model '{item}'.")
+
+            return DDPModuleProxy(torch.nn.parallel.DistributedDataParallel(
+                module=item,
+                device_ids=[torch.cuda.current_device()]
+            ))
+        
+        return item
+
+    if isinstance(item, Recorder):
+        if torch.distributed.get_rank() != 0: # Only rank zero may log stats
+            item.silence()
+            logger.debug(f"Silencing recorder '{item}' in rank '{torch.distributed.get_rank()}'.")
+
+        return item
+
+    if isinstance(item, dict):
+        return {name: _to_distributed_data_parallel(sub_item) for name, sub_item in item.items()}
+
+    if isinstance(item, (list, tuple)):
+        return [_to_distributed_data_parallel(sub_item) for sub_item in item]
+
+    return item
+
 
 class TorchContext:
+    """
+        Some added objects will be wrapped in proxy objects. While this should
+        not affect their use, it may be good to know when troubleshooting.
+
+        parameters:
+            cuda, checkpoint, distributed
+    
+        torch.nn.Module: 
+            cuda: moved to torch.cuda.current_device()
+            cpu: moved to cpu
+            ddp: Gets wrapped in torch.nn.parallel.DistributedDataParallel on torch.cuda.current_device()
+        
+        pystematic.torch.Recorder:
+            ddp: gets silenced on non master processes
+
+        torch.optim.Optimizer:
+            cuda, cpu, ddp: FAIL! Add the optimizer after moving the context.
+
+        torch.utils.data.DataLoader:
+            loading bar is displayed when iterating
+            items yielded from iterator are moved to correct device
+    """
+
+    def __call__(self, 
+        wrap_nn_module=True, 
+        load_checkpoint=True,
+        silence_recorders=True
+    ):
+        pass
+
+    def state_dict(self) -> dict:
+        """Returns the whole state of the context by iterating all registered
+        items and calling ``state_dict()`` on the item to retrieve its state.
+        Primitive values will also be saved.
+        """
+        return {name: _get_state_dict(item) for name, item in vars(self).items()}
+
+    def load_state_dict(self, state : dict) -> None:
+        """Sets the state for the context.
+
+        Args:
+            state (dict, list): The state to load.
+        """
+        for name, item_state in state.items():
+            if name in vars(self):
+                setattr(self, name, _set_state_dict(getattr(self, name), item_state))
+
+    def to(self, device):
+        """Move the context to a specific device
+
+        Args:
+            device (str, torch.Device): The device to move the context to.
+        """
+        for name, item in vars(self).items():
+            setattr(self, name, _move_to_device(item, device))
+        
+        return self
 
     def cuda(self):
-        raise NotImplementedError()
+        """Moves the context to ``torch.cuda.current_device()``.
+        """
+        return self.to(f"cuda:{torch.cuda.current_device()}")
 
     def cpu(self):
-        raise NotImplementedError()
+        """Moves the context to the cpu.
+        """
+        return self.to("cpu")
 
     def ddp(self):
-        raise NotImplementedError()
-
-    def state_dict(self):
-        raise NotImplementedError()
-
-    def load_state_dict(self):
-        raise NotImplementedError()
+        """Moves the context to a distributed data-parallell setting. Can only
+        be used if torch.distributed is initialized.
+        """
+        for name, item in vars(self).items():
+            setattr(self, name, _to_distributed_data_parallel(item))
+        
+        return self
 
     def autotransform(self):
+        """Transforms the context according to the current experiment
+        parameters. More specifically it; loads a state_dict from the parameter
+        'checkpoint' if set, moves to cuda if paramter 'cuda' is set, moves to
+        distributed if parameter 'distributed' is set.
+        """
         from pystematic import params
+
         if params["checkpoint"]:
             logger.info(f"Loading checkpoint '{params['checkpoint']}'.")
             with open(params["checkpoint"], "rb") as f:
@@ -34,281 +274,75 @@ class TorchContext:
 
         if params["distributed"]:
             self.ddp()
- 
-    def _wrap_value(self, value):
-        if isinstance(value, (list, tuple)):
-            new_value = ContextList()
-            for val in value:
-                new_value.append(val)
-
-            return new_value
-        elif isinstance(value, dict):
-            new_value = ContextDict()
-            for key, val in value.items():
-                new_value[key] = val
-            
-            return new_value
-
-        return value
-
-    def _to_cuda(self, item):
-        return self._move_to_device(item, f"cuda:{torch.cuda.current_device()}")
-
-    def _to_cpu(self, item):
-        return self._move_to_device(item, "cpu")
-
-    def _to_ddp(self, name, item):
-        if isinstance(item, TorchContext):
-            item.ddp()
-
-        elif isinstance(item, torch.nn.Module):
-            if any([p.requires_grad for p in item.parameters()]):
-                logger.debug(f"Converting to distributed for model '{name}'.")
-
-                item = torch.nn.parallel.DistributedDataParallel(
-                    module=item,
-                    device_ids=[torch.cuda.current_device()]
-                )
-
-        elif isinstance(item, Recorder):
-            if torch.distributed.get_rank() != 0: # Only rank zero may log stats
-                item.silence()
-                logger.debug(f"Silencing recorder '{name}' in rank '{torch.distributed.get_rank()}'.")
-
-        return item
-    
-    def _get_state_dict(self, item):
-        supported_types = (int, float, complex, str)
         
-        if callable(getattr(item, "state_dict", None)):
-            if isinstance(item, torch.nn.parallel.DistributedDataParallel):
-                return item.module.state_dict()
-            else:
-                return item.state_dict()
+        return self
 
-        elif isinstance(item, supported_types):
-            return {
-                "native_value": item
-            }
+class SmartDataLoader(torch.utils.data.DataLoader):
+    """
+        torch.utils.data.DataLoader:
+            loading bar is displayed when iterating
+            items yielded from iterator are moved to correct device
+    """
+
+    def __init__(self, dataset, shuffle=False, random_seed=None, move_output=True, loading_bar=True, **kwargs):
+        super().__init__(dataset, sampler=create_sampler(dataset, shuffle, random_seed), **kwargs)
+        self._move_output = move_output
+        self._show_loading_bar = loading_bar
+        self._device = None
+
+    def to(self, device):
+        self._device = device
+        return self
+
+    def __iter__(self):
+
+        if self._show_loading_bar:
+            is_master = not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0
+
+            iterable = tqdm.tqdm(super().__iter__(), leave=True)
+
         else:
-            logger.debug(f"Cannot checkpoint object of type '{type(item)}'")
+            iterable = super().__iter__()
 
-        return None
+        if self._move_output:
+            for item in iterable:
+                yield _move_to_device(item, self._device)
 
-    def _set_state_dict(self, item, state_dict):
-        
-        supported_types = (int, float, complex, str)
-        if callable(getattr(item, "load_state_dict", None)):
-            if isinstance(item, torch.nn.parallel.DistributedDataParallel):
-                item.module.load_state_dict(self._move_to_same_device_as(state_dict, item.module))
-            else:
-                item.load_state_dict(self._move_to_same_device_as(state_dict, item))
-
-        elif isinstance(item, supported_types):
-            return state_dict["native_value"] if "native_value" in state_dict else state_dict["count"]
-            
         else:
-            logger.debug(f"Cannot checkpoint object of type '{type(item)}'.")
+            yield from iterable
 
-        return item
+def create_sampler(dataset, shuffle=True, seed=None):
+    """Returns a DistributedSampler if running in distributed mode, otherwise a normal sampler
 
-    def _move_to_same_device_as(self, to_move, target):
-        if hasattr(target, "device"):
-            return self._move_to_device(to_move, target.device)
+    Args:
+        dataset (torch.utils.data.Dataset): The dataset the sampler will work on.
+        shuffle (bool): If the sampler should be random or not.
+    """
 
-        elif callable(getattr(target, "parameters", None)):
-            try:
-                return self._move_to_device(to_move, next(target.parameters()).device)
-            except StopIteration:
-                pass
+    if torch.distributed.is_initialized():
+        return BetterDistributedSampler(
+            dataset=dataset, 
+            shuffle=shuffle,
+            seed=seed
+        )
 
-        return to_move
-
-    def _move_to_device(self, obj, device):
-        if isinstance(obj, dict):
-            res = {}
-            for name, value in obj.items():
-                res[name] = self._move_to_device(value, device)
-
-        elif isinstance(obj, (list, tuple)):
-            res = []
-            for i in range(len(obj)):
-                res.append(self._move_to_device(obj[i], device))
-
-        elif callable(getattr(obj, "to", None)):
-            res = obj.to(device=device)
-        elif isinstance(obj, torch.optim.Optimizer):
-            obj.load_state_dict(self._move_to_device(obj.state_dict(), device))
-            res = obj
-        else:
-            res = obj
-            # raise Exception(f"Unsupported object type '{type(obj)}'")
-
-        return res
-
-
-class ContextObject(TorchContext):
-
-    def __init__(self):
-        object.__setattr__(self, "_items", {})
-
-    def __getattr__(self, name):
-        if name in self._items:
-            return self._items[name]
-
-        raise AttributeError(f"TorchContext does not have an attribute named '{name}'.")
-
-    def __setattr__(self, name, value):
-        self._items[name] = self._wrap_value(value)
-
-    def has(self, name : str):
-        return name in self._items
-
-    def cuda(self):
-        for name, item in self._items.items():
-            self._items[name] = self._to_cuda(item)
-
-        return self
-  
-    def cpu(self):
-        for name, item in self._items.items():
-            self._items[name] = self._to_cpu(item)
-        
-        return self
-
-    def ddp(self):
-        assert torch.distributed.is_initialized(), "You must initialize a distributed runtime before calling ddp."
-        
-        for name, item in self._items.items():
-            self._items[name] = self._to_ddp(name, item)
-        
-        return self
-        
-    def state_dict(self) -> dict:
-        dict_with_state = {}
-
-        for name, item in self._items.items():
-            dict_with_state[name] = self._get_state_dict(item)
-
-        return dict_with_state
-
-    def load_state_dict(self, state : dict) -> None:
-
-        for name, item_state in state.items():
-            if name in self._items:
-                self._items[name] = self._set_state_dict(self._items[name], item_state)
-            
-
-class ContextDict(TorchContext):
+    if shuffle:
+        g = torch.Generator()
+        if seed is not None:
+            g.manual_seed(seed)
+        return torch.utils.data.RandomSampler(data_source=dataset, generator=g)
     
-    def __init__(self):
-        object.__setattr__(self, "_items", {})
+    return torch.utils.data.SequentialSampler(data_source=dataset)
 
-    def __getitem__(self, name):
-        return self._items[name]
 
-    def __setitem__(self, name, value):
-        self._items[name] = self._wrap_value(value)
+class BetterDistributedSampler(torch.utils.data.distributed.DistributedSampler):
+    """This class extends torch's default DistributedSampler but removes the need
+    for manually calling the set_epoch method to reseed the random sampler
+    """
+    def __init__(self, dataset, shuffle=True, seed=None):
+        super().__init__(dataset, shuffle=shuffle, seed=seed)
+        self.epoch = 0
 
-    def items(self):
-        return {key:item for key, item in self._items}
-
-    def keys(self):
-        return self._items.keys()
-
-    def values(self):
-        return self._items.values()
-
-    def cuda(self):
-        for name, item in self._items.items():
-            self._items[name] = self._to_cuda(item)
-
-        return self
-  
-    def cpu(self):
-        for name, item in self._items.items():
-            self._items[name] = self._to_cpu(item)
-        
-        return self
-
-    def ddp(self):
-        assert torch.distributed.is_initialized(), "You must initialize a distributed runtime before calling ddp."
-        
-        for name, item in self._items.items():
-            self._items[name] = self._to_ddp(name, item)
-        
-        return self
-
-    def state_dict(self) -> dict:
-        dict_with_state = {}
-
-        for name, item in self._items.items():
-            dict_with_state[name] = self._get_state_dict(item)
-
-        return dict_with_state
-
-    def load_state_dict(self, state : dict) -> None:
-
-        for name, item in state.items():
-            if name in self._items:
-                self._items[name] = self._set_state_dict(self._items[name], item)
-            
-
-class ContextList(TorchContext):
-    
-    def __init__(self):
-        object.__setattr__(self, "_items", [])
-
-    def __getitem__(self, index):
-        return self._items[index]
-
-    def __setitem__(self, name, value):
-        self._items[name] = self._wrap_value(value)
-
-    def insert(self, index, value):
-        self._items.insert(index, self._wrap_value(value))
-
-    def append(self, value):
-        self._items.append(self._wrap_value(value))
-
-    def __len__(self):
-        return len(self._items)
-    
-    def cuda(self):
-        for i, item in enumerate(self._items):
-            self._items[i] = self._to_cuda(item)
-        
-        return self
-  
-    def cpu(self):
-        for i, item in enumerate(self._items):
-            self._items[i] = self._to_cpu(item)
-        
-        return self
-
-    def ddp(self):
-        assert torch.distributed.is_initialized(), "You must initialize a distributed runtime before calling ddp."
-        
-        for i, item in enumerate(self._items):
-            self._items[i] = self._to_ddp(item)
-        
-        return self
-    
-    def state_dict(self) -> dict:
-        """Returns the combined state_dict of all contained items
-
-        Returns:
-            dict: A dict that maps names to state_dicts
-        """
-        list_with_state = []
-
-        for i, item in enumerate(self._items):
-            list_with_state.append(self._get_state_dict(item))
-
-        return list_with_state
-
-    def load_state_dict(self, state : dict) -> None:
-
-        for i, item in enumerate(self.state):
-            self._items[i] = self._set_state_dict(self._items[i], item)
-       
+    def __iter__(self):
+        self.set_epoch(self.epoch+1)
+        return super().__iter__()
