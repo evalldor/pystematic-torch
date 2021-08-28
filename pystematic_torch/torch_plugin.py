@@ -160,8 +160,9 @@ class TorchApi:
             torch.distributed.barrier()
 
     TorchContext = context.TorchContext
+    SmartDataLoader = context.SmartDataLoader
     Recorder = recording.Recorder
-    BetterDataLoader = torchutil.BetterDataLoader
+
 
 pytorch_params = [
     core.Parameter(
@@ -218,18 +219,16 @@ pytorch_params = [
         default="127.0.0.1",
         envvar="MASTER_ADDR",
         type=str,
-        help="Master node (rank 0)'s address, should be either "
-            "the IP address or the hostname of node 0. Leave "
-            "default for single node training.",
+        help="The master node's (rank 0) IP address or the hostname. "
+            "Leave default for single node training.",
     ),
     core.Parameter(
         name="master_port", 
         default=29500, 
         envvar="MASTER_PORT",
         type=int,
-        help="Master node (rank 0)'s free port that needs to "
-            "be used for communciation during distributed "
-            "training.",
+        help="The master node's (rank 0) port used for "
+            "communciation during distributed training.",
     ),
 ]
 
