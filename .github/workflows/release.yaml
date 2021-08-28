@@ -53,12 +53,15 @@ jobs:
       
       - name: Install dependencies
         run: poetry install
+      
+      - name: test
+        run: echo $(poetry run python -c "import importlib_metadata; print(f'v{importlib_metadata.version('pystematic-torch')}')")
 
-      - name: Tag
-        run: git tag $(poetry run python -c "import pystematic; print(f'v{pystematic.__version__}')") && git push --tags
+      # - name: Tag
+      #   run: git tag $(poetry run python -c "import importlib_metadata; print(f'v{importlib_metadata.version('pystematic-torch')}')") && git push --tags
 
-      - name: Build wheel
-        run: poetry build -f wheel
+      # - name: Build wheel
+      #   run: poetry build -f wheel
 
-      - name: Publish to pypi
-        run: poetry publish -u __token__ -p ${{ secrets.PYPI_API_TOKEN }}
+      # - name: Publish to pypi
+      #   run: poetry publish -u __token__ -p ${{ secrets.PYPI_API_TOKEN }}
