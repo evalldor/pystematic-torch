@@ -225,38 +225,47 @@ class Context:
         """
         return self.to("cpu")
 
-    def ddp(self, wrap_nn_module=True, silence_recorders=True):
-        """Moves the context to a distributed data-parallell setting. Can only
-        be used if torch.distributed is initialized. The flags passed to
-        this function allows you to toggle some behavior of the transform.
+    # def ddp(self, wrap_nn_module=True, silence_recorders=True):
+    #     """Moves the context to a distributed data-parallell setting. Can only
+    #     be used if torch.distributed is initialized. The flags passed to
+    #     this function allows you to toggle some behavior of the transform.
 
-        Args:
-            wrap_nn_module (bool, optional): Controls if torch.nn.Module objects should be wrapped 
-                in :obj:`torch.nn.parallel.DistributedDataParallel`. Defaults to True.
-            silence_recorders (bool, optional): Controls if all recorders on all non-master processes should 
-                be silenced. Silencing recorders means that only the recorder in the master process is active, 
-                and that all recording done in non-master processes is ignored. Defaults to True.
-        """
+    #     Args:
+    #         wrap_nn_module (bool, optional): Controls if torch.nn.Module objects should be wrapped 
+    #             in :obj:`torch.nn.parallel.DistributedDataParallel`. Defaults to True.
+    #         silence_recorders (bool, optional): Controls if all recorders on all non-master processes should 
+    #             be silenced. Silencing recorders means that only the recorder in the master process is active, 
+    #             and that all recording done in non-master processes is ignored. Defaults to True.
+    #     """
+    def ddp(self):
+        """Moves the context to a distributed data-parallell setting. Can only
+        be used if torch.distributed is initialized."""
         for name, item in vars(self).items():
             setattr(self, name, _to_distributed_data_parallel(item))
         
         return self
 
-    def autotransform(self, wrap_nn_modules=True, load_checkpoint=True, silence_recorders=True):
+    # def autotransform(self, wrap_nn_modules=True, load_checkpoint=True, silence_recorders=True):
+    #     """Transforms the context according to the current experiment
+    #     parameters. More specifically it; loads a state_dict from the parameter
+    #     ``checkpoint`` if set, moves to cuda if paramter ``cuda`` is set, moves
+    #     to distributed if parameter ``distributed`` is set. The flags passed to
+    #     this function allows you to toggle some behavior of the transform.
+
+    #     Args:
+    #         wrap_nn_modules (bool, optional): Controls if torch.nn.Module objects should be wrapped 
+    #             in :obj:`torch.nn.parallel.DistributedDataParallel`. Defaults to True.
+    #         load_checkpoint (bool, optional): Controls the checkpoint given in the experiment parameter 
+    #             ``checkpoint`` should be loaded (if the parameter has been set). Defaults to True.
+    #         silence_recorders (bool, optional): Controls if all recorders on all non-master processes should 
+    #             be silenced. Silencing recorders means that only the recorder in the master process is active, 
+    #             and that all recording done in non-master processes is ignored. Defaults to True.
+    #     """
+    def autotransform(self):
         """Transforms the context according to the current experiment
         parameters. More specifically it; loads a state_dict from the parameter
         ``checkpoint`` if set, moves to cuda if paramter ``cuda`` is set, moves
-        to distributed if parameter ``distributed`` is set. The flags passed to
-        this function allows you to toggle some behavior of the transform.
-
-        Args:
-            wrap_nn_modules (bool, optional): Controls if torch.nn.Module objects should be wrapped 
-                in :obj:`torch.nn.parallel.DistributedDataParallel`. Defaults to True.
-            load_checkpoint (bool, optional): Controls the checkpoint given in the experiment parameter 
-                ``checkpoint`` should be loaded (if the parameter has been set). Defaults to True.
-            silence_recorders (bool, optional): Controls if all recorders on all non-master processes should 
-                be silenced. Silencing recorders means that only the recorder in the master process is active, 
-                and that all recording done in non-master processes is ignored. Defaults to True.
+        to distributed if parameter ``distributed`` is set.
         """
         from pystematic import params
 
