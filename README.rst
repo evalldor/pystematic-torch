@@ -28,7 +28,9 @@ training session in pytorch.
     @pystematic.experiment
     def context_example(params):
         ctx = pystematic.torch.Context()
+        
         ctx.epoch = 0
+
         ctx.recorder = pystematic.torch.Recorder()
 
         ctx.model = torch.nn.Sequential(
@@ -36,6 +38,8 @@ training session in pytorch.
             torch.nn.Sigmoid()
         )
         
+        ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
+
         # We use the smart dataloader so that batches are moved to 
         # the correct device
         ctx.dataloader = pystematic.torch.SmartDataLoader(
@@ -47,12 +51,9 @@ training session in pytorch.
         ctx.cuda() # Move everything to cuda 
         # ctx.ddp() # and maybe distributed data-parallel?
 
-        # Remember to initialize the optimizer after moving
-        ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
-
         if params["checkpoint"]:
             # Load checkpoint
-            ctx.load_state_dict(params["checkpoint"])
+            ctx.load_state_dict(pystematic.torch.load_checkpoint(params["checkpoint"]))
 
         # Train one epoch
         for input, lbl in ctx.dataloader:

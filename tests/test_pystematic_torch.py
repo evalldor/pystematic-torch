@@ -36,8 +36,6 @@ def test_context_cpu():
     ctx.loss_function = torch.nn.BCELoss()
     ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
     
-    with pytest.raises(Exception):
-        ctx.cpu() # Having an optimizer present when moving
 
     
     for input, lbl in ctx.dataloader:
@@ -58,6 +56,7 @@ def test_move_context_to_cuda():
         torch.nn.Linear(2, 1),
         torch.nn.Sigmoid()
     )
+    ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
     ctx.dataloader = pystematic.torch.SmartDataLoader(
         dataset=Dataset(),
         batch_size=2
@@ -65,7 +64,7 @@ def test_move_context_to_cuda():
     ctx.loss_function = torch.nn.BCELoss()
 
     ctx.cuda()
-    ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
+    
 
 
     for input, lbl in ctx.dataloader:
@@ -166,35 +165,37 @@ class Dataset:
 @pystematic.experiment
 def ddp_exp(params):
     ctx = pystematic.torch.Context()
+    ctx.epoch = 0
     ctx.recorder = pystematic.torch.Recorder()
 
     ctx.model = torch.nn.Sequential(
         torch.nn.Linear(2, 1),
         torch.nn.Sigmoid()
     )
-
-    # We use the smart dataloader so that batches are moved to the correct
-    # device
+    
+    ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
+    # We use the smart dataloader so that batches are moved to 
+    # the correct device
     ctx.dataloader = pystematic.torch.SmartDataLoader(
         dataset=Dataset(),
         batch_size=2
     )
     ctx.loss_function = torch.nn.BCELoss()
 
-    ctx.cuda() # Move everything to cuda
-    ctx.ddp() # and maybe distributed data-parallel?
+    ctx.cuda() # Move everything to cuda 
+    ctx.ddp()
 
-    # Remember to initialize the optimizer after moving
-    ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
 
-    # Load checkpoint
-    ctx.load_state_dict(pystematic.torch.load_checkpoint(params["checkpoint"]))
+    if params["checkpoint"]:
+        # Load checkpoint
+        ctx.load_state_dict(pystematic.torch.load_checkpoint(params["checkpoint"]))
 
     # Train one epoch
     for input, lbl in ctx.dataloader:
-        # The smart dataloader makes sure the batch is placed on the correct device.
+        # The smart dataloader makes sure the batch is placed on 
+        # the correct device.
         output = ctx.model(input)
-
+        
         loss = ctx.loss_function(output, lbl)
 
         ctx.optimzer.zero_grad()
@@ -203,8 +204,12 @@ def ddp_exp(params):
 
         ctx.recorder.scalar("train/loss", loss)
         ctx.recorder.step()
+    
+    ctx.epoch += 1
+
+    assert ctx.epoch == 2
 
     # Save checkpoint
-    pystematic.torch.save_checkpoint(ctx.state_dict(), id=2)
+    pystematic.torch.save_checkpoint(ctx.state_dict(), id=ctx.epoch)
 
 

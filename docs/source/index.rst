@@ -67,10 +67,10 @@ resources. The main purpose of the context object is to allow you to transition
 seamlessly between these different modes of training, without changing your
 code. 
 
-If you are familiar with the ``torch.nn.Module`` object, you know that whenever
+If you are familiar with the :obj:`Torch.nn.Module` object, you know that whenever
 you add a paramater to the object, it gets registered with it, and when you want
-to move the model to another device, you simply call ``module.cuda()`` or
-``module.cpu()`` to move all paramters registered with the module.
+to move the model to another device, you simply call :meth:`module.cuda` or
+:meth:`module.cpu` to move all paramters registered with the module.
 
 A context object is like a torch module on steroids. You are meant to register
 every object important to your training session with it, e.g. models,
@@ -90,7 +90,9 @@ Here is a short example showing how the Context may be used:
     @pystematic.experiment
     def context_example(params):
         ctx = pystematic.torch.Context()
+        
         ctx.epoch = 0
+
         ctx.recorder = pystematic.torch.Recorder()
 
         ctx.model = torch.nn.Sequential(
@@ -98,6 +100,8 @@ Here is a short example showing how the Context may be used:
             torch.nn.Sigmoid()
         )
         
+        ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
+
         # We use the smart dataloader so that batches are moved to 
         # the correct device
         ctx.dataloader = pystematic.torch.SmartDataLoader(
@@ -109,12 +113,10 @@ Here is a short example showing how the Context may be used:
         ctx.cuda() # Move everything to cuda 
         # ctx.ddp() # and maybe distributed data-parallel?
 
-        # Remember to initialize the optimizer after moving
-        ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
 
         if params["checkpoint"]:
             # Load checkpoint
-            ctx.load_state_dict(params["checkpoint"])
+            ctx.load_state_dict(pystematic.torch.load_checkpoint(params["checkpoint"]))
 
         # Train one epoch
         for input, lbl in ctx.dataloader:
@@ -153,10 +155,7 @@ object:
 
 :obj:`torch.optim.Optimizer`:
 
-* cuda, cpu, ddp: If an optimizer instance is encounterd any of these call
-  will raise an exception. The reason is that optimizers needs to be initialized
-  *after* the parameters have been placed on the correct. This is an unfortunate
-  quirk of pytorch and will hopefully be fixed in the future.
+* cuda, cpu, ddp: Optimizer parameters will be moved to the correct device.
 
 :obj:`pystematic.torch.Recorder`:
 

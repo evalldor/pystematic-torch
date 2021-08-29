@@ -41,8 +41,9 @@ def _move_to_device(obj, device):
         return obj.to(device=device)
 
     if isinstance(obj, torch.optim.Optimizer):
-        raise Exception("Instances of 'torch.optim.Optimizer' cannot be moved! "
-                        "You have to manually reinitialize the optimizer after moving!")
+        obj.load_state_dict(_move_to_device(obj.state_dict(), device))
+
+        return obj
 
     if isinstance(obj, dict):
         res = {}
@@ -102,7 +103,7 @@ def _set_state_dict(item, state, path=[]):
         return item
 
     if isinstance(item, (int, float, complex, str)):
-        if isinstance(state, (int, float, complex, str)):
+        if not isinstance(state, (int, float, complex, str)):
             raise ValueError(f"Error when setting state for item '{'.'.join(path)}', "
                              f"expected a primitive value, got '{type(state)}'.")
 
@@ -179,29 +180,25 @@ def _to_distributed_data_parallel(item):
 
 
 class Context:
-    """
-
-    """
-
-    def __call__(self, 
-        wrap_nn_module=True, 
-        load_checkpoint=True,
-        silence_recorders=True
-    ):
-        pass
 
     def state_dict(self) -> dict:
         """Returns the whole state of the context by iterating all registered
         items and calling ``state_dict()`` on the item to retrieve its state.
         Primitive values will also be saved.
+        
+
+        Returns:
+            dict: A dict representing the state of all registered objects.
         """
+
+        
         return {name: _get_state_dict(item) for name, item in vars(self).items()}
 
     def load_state_dict(self, state : dict) -> None:
         """Sets the state for the context.
 
         Args:
-            state (dict, list): The state to load.
+            state (dict): The state to load.
         """
         for name, item_state in state.items():
             if name in vars(self):
@@ -228,20 +225,38 @@ class Context:
         """
         return self.to("cpu")
 
-    def ddp(self):
+    def ddp(self, wrap_nn_module=True, silence_recorders=True):
         """Moves the context to a distributed data-parallell setting. Can only
-        be used if torch.distributed is initialized.
+        be used if torch.distributed is initialized. The flags passed to
+        this function allows you to toggle some behavior of the transform.
+
+        Args:
+            wrap_nn_module (bool, optional): Controls if torch.nn.Module objects should be wrapped 
+                in :obj:`torch.nn.parallel.DistributedDataParallel`. Defaults to True.
+            silence_recorders (bool, optional): Controls if all recorders on all non-master processes should 
+                be silenced. Silencing recorders means that only the recorder in the master process is active, 
+                and that all recording done in non-master processes is ignored. Defaults to True.
         """
         for name, item in vars(self).items():
             setattr(self, name, _to_distributed_data_parallel(item))
         
         return self
 
-    def autotransform(self):
+    def autotransform(self, wrap_nn_modules=True, load_checkpoint=True, silence_recorders=True):
         """Transforms the context according to the current experiment
         parameters. More specifically it; loads a state_dict from the parameter
         ``checkpoint`` if set, moves to cuda if paramter ``cuda`` is set, moves
-        to distributed if parameter ``distributed`` is set.
+        to distributed if parameter ``distributed`` is set. The flags passed to
+        this function allows you to toggle some behavior of the transform.
+
+        Args:
+            wrap_nn_modules (bool, optional): Controls if torch.nn.Module objects should be wrapped 
+                in :obj:`torch.nn.parallel.DistributedDataParallel`. Defaults to True.
+            load_checkpoint (bool, optional): Controls the checkpoint given in the experiment parameter 
+                ``checkpoint`` should be loaded (if the parameter has been set). Defaults to True.
+            silence_recorders (bool, optional): Controls if all recorders on all non-master processes should 
+                be silenced. Silencing recorders means that only the recorder in the master process is active, 
+                and that all recording done in non-master processes is ignored. Defaults to True.
         """
         from pystematic import params
 
@@ -285,9 +300,9 @@ class SmartDataLoader(torch.utils.data.DataLoader):
 
     def __iter__(self):
 
-        if self._show_loading_bar:
-            is_master = not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0
+        is_master = not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0
 
+        if self._show_loading_bar and is_master:
             iterable = tqdm.tqdm(super().__iter__(), leave=True)
 
         else:

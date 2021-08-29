@@ -91,7 +91,8 @@ class Recorder:
         """Logs a scalar value.
 
         Args:
-            tag (str): A string that represents the 'name' of the scalar.
+            tag (str): A string that determines which time series the value 
+                should be recorded to.
             scalar (float): The value of the scalar.
         """
         if torch.is_tensor(scalar):
@@ -104,7 +105,8 @@ class Recorder:
         """Logs a matplotlib figure
 
         Args:
-            tag (str): A string tag
+            tag (str): A string that determines which time series the value 
+                should be recorded to.
             fig (Figure): A matplotlib figure
         """
 
@@ -118,7 +120,8 @@ class Recorder:
         """Logs an image
 
         Args:
-            tag (str): The tag
+            tag (str): A string that determines which time series the value 
+                should be recorded to.
             image (PIL.Image, np.ndarray, torch.tensor): The image
         """
 
@@ -129,10 +132,11 @@ class Recorder:
             backend.image(tag, image, self.count)
 
     def state_dict(self):
-        """Returns the state of the recorder, which consists of the counter :attr:`count`.
+        """Returns the state of the recorder, which consists of the counter 
+        :attr:`count`.
 
         Returns:
-            dict: The state dict
+            dict: A dict representing the state of this recorder
         """
         return {
             "count": self.count
