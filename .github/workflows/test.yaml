@@ -1,5 +1,5 @@
 
-name: Test
+name: Test install
 
 # Controls when the workflow will run
 on:
@@ -35,5 +35,6 @@ jobs:
       - name: Install dependencies
         run: poetry install
 
-      - name: Run tests
-        run: poetry run pytest -s
+      # Tests have to be run on hardware with at least two CUDA gpus available
+      # - name: Run tests
+      #   run: poetry run pytest -s

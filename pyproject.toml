@@ -1,14 +1,14 @@
 [tool.poetry]
 name = "pystematic-torch"
 version = "1.0.0"
-description = "Pystematic plugin for running pytorch experiments."
+description = "Pystematic extension for running experiments in pytorch."
 repository = "https://github.com/evalldor/pystematic-torch"
 documentation = ""
 license = "MIT"
 readme = "README.rst"
 authors = ["E.Valldor"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
