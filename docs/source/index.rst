@@ -203,8 +203,9 @@ The following parameters are added to all experiments by default. Note that
 these are also listed if you run an experiment from the command line with the
 ``--help`` option.
 
-* ``checkpoint``: If using the context :meth:`autotransform` method, it will load the
-  checkpoint pointed to by this parameter (if set). Default value is ``None``.
+* ``checkpoint``: If using the context :meth:`autotransform` method, it will
+  load the checkpoint pointed to by this parameter (if set). Default value is
+  ``None``.
 
 * ``cuda``: If using the context :meth:`autotransform` method, setting this to
   True will move the context to cuda. Default value is ``True``.
@@ -226,9 +227,8 @@ these are also listed if you run an experiment from the command line with the
 * ``nnodes``: The number of nodes to use for distributed training. Default value
   is ``1``.
 
-* ``master_addr``: Master node (rank 0)'s address, should be either 
-  the IP address or the hostname of node 0. Leave default for single node
-  training. Default value is ``127.0.0.1``.
+* ``master_addr``: The master node's (rank 0) IP address or the hostname.
+  Leave default for single node training. Default value is ``127.0.0.1``.
 
-* ``master_port``: Master node (rank 0)'s free port that needs to be used for
-  communciation during distributed training. Default value is ``29500``.
+* ``master_port``: The master node's (rank 0) port used for communciation 
+  during distributed training. Default value is ``29500``.

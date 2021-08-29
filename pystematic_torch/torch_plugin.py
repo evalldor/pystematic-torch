@@ -212,42 +212,49 @@ pytorch_params = [
     core.Parameter(
         name="checkpoint",
         type=pathlib.Path,
-        help="Load context from checkpoint."
+        help="If using the context autotransform() method, it will "
+        "load the checkpoint pointed to by this parameter (if set)."
     ),
     core.Parameter(
         name="cuda",
         default=True,
-        is_flag=True
+        is_flag=True,
+        help="If using the context autotransform() method, "
+        "setting this to True will move the context to cuda."
     ),
     core.Parameter(
         name="distributed",
-        help="Launch in distributed mode.",
         default=False,
-        is_flag=True
+        is_flag=True,
+        help="Controls if the experiment should be run in a distributed "
+        "fashion (multiple GPUs). When set to True, a distributed mode "
+        "will be launched (similar to torch.distributed.launch) "
+        "before the experiment main function is run. If using the context "
+        "autotransform() method, this parameter also tells the context "
+        "whether to move to distributed mode (ddp)."
     ),
     core.Parameter(
         name="nproc_per_node",
         envvar="NPROC_PER_NODE", 
         type=int, 
         default=1,
-        help="The number of processes to launch on each node, "
-            "for GPU training, this is recommended to be set "
-            "to the number of GPUs in your system so that "
-            "each process can be bound to a single GPU.",
+        help="The number of processes to launch on each node, for GPU "
+        "training, this is recommended to be set to the number of GPUs "
+        "in your system so that each process can be bound to a single GPU."
     ),
     core.Parameter(
         name="node_rank", 
         envvar="NODE_RANK",
         type=int, 
         default=0,
-        help="The rank of the node for multi-node distributed training.",
+        help="The rank of the node for multi-node distributed training."
     ),
     core.Parameter(
         name="nnodes", 
         envvar="NNODES",
         type=int, 
         default=1,
-        help="The number of nodes to use for distributed training.",
+        help="The number of nodes to use for distributed training."
     ),
     core.Parameter(
         name="master_addr", 
@@ -255,15 +262,15 @@ pytorch_params = [
         envvar="MASTER_ADDR",
         type=str,
         help="The master node's (rank 0) IP address or the hostname. "
-            "Leave default for single node training.",
+        "Leave default for single node training."
     ),
     core.Parameter(
         name="master_port", 
         default=29500, 
         envvar="MASTER_PORT",
         type=int,
-        help="The master node's (rank 0) port used for "
-            "communciation during distributed training.",
-    ),
+        help="The master node's (rank 0) port used for communciation "
+        "during distributed training."
+    )
 ]
 
