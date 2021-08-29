@@ -84,35 +84,52 @@ Here is a short example showing how the Context may be used:
 
     import pystematic
 
-    ctx = pystematic.torch.TorchContext()
+    @pystematic.experiment
+    def context_example(params):
+        ctx = pystematic.torch.Context()
+        ctx.recorder = pystematic.torch.Recorder()
 
-    ctx.model = torch.nn.Sequential(
-        torch.nn.Linear(2, 1),
-        torch.nn.Sigmoid()
-    )
-    
-    # We use the smart dataloader so that batches are moved to the correct
-    # device
-    ctx.dataloader = pystematic.torch.SmartDataLoader(
-        dataset=Dataset(),
-        batch_size=2
-    )
-    ctx.loss_function = torch.nn.BCELoss()
-
-    ctx.cuda() # Move everything to cuda
-
-    # Remember to initialize the optimizer after moving
-    ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
-
-    for input, lbl in ctx.dataloader:
-
-        output = ctx.model(input)
+        ctx.model = torch.nn.Sequential(
+            torch.nn.Linear(2, 1),
+            torch.nn.Sigmoid()
+        )
         
-        loss = ctx.loss_function(output, lbl)
+        # We use the smart dataloader so that batches are moved to 
+        # the correct device
+        ctx.dataloader = pystematic.torch.SmartDataLoader(
+            dataset=Dataset(),
+            batch_size=2
+        )
+        ctx.loss_function = torch.nn.BCELoss()
 
-        ctx.optimzer.zero_grad()
-        loss.backward()
-        ctx.optimzer.step()
+        ctx.cuda() # Move everything to cuda 
+        # ctx.ddp() # and maybe distributed data-parallel?
+
+        # Remember to initialize the optimizer after moving
+        ctx.optimzer = torch.optim.SGD(ctx.model.parameters(), lr=0.01)
+
+        if params["checkpoint"]:
+            # Load checkpoint
+            ctx.load_state_dict(params["checkpoint"])
+
+        # Train one epoch
+        for input, lbl in ctx.dataloader:
+            # The smart dataloader makes sure the batch is placed on 
+            # the correct device.
+            output = ctx.model(input)
+            
+            loss = ctx.loss_function(output, lbl)
+
+            ctx.optimzer.zero_grad()
+            loss.backward()
+            ctx.optimzer.step()
+
+            ctx.recorder.scalar("train/loss", loss)
+            ctx.recorder.step()
+
+        # Save checkpoint
+        pystematic.torch.save_checkpoint(ctx.state_dict(), id=1)
+
 
 
 .. autoclass:: pystematic.torch.Context

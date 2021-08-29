@@ -4,7 +4,6 @@ import pathlib
 import pystematic as ps
 import pystematic.core as core
 import torch
-import tqdm
 
 from . import context, recording, utils
 
@@ -47,7 +46,6 @@ class TorchApi:
         element and moving them to the proper device if possible. Unrecognized
         objects will be left as is.
 
-
         Args:
             device (str, torch.Device): The device to move to
             *args (any): Any objects that you want to move
@@ -62,12 +60,10 @@ class TorchApi:
         return context._move_to_device(args, device)
 
     def save_checkpoint(self, state_dict, id) -> None:
-        """Saves registered items to a file. All items that have a function
-        named ``state_dict`` will be saved by calling that function and saving
-        the returned value. This function will make sure to only save the
-        checkpoint in the master process when called in distributed mode.
+        """Saves the provided state_dict to a file in ``pystematic.output_dir``.
+        This function will make sure to only save the checkpoint in the master
+        process when called in distributed mode.
         
-
         Args:
             state_dict (dict): The state dict to save, such as the on returned from 
                 :meth:`Context.state_dict`
@@ -96,11 +92,12 @@ class TorchApi:
             return torch.load(f, map_location="cpu")
 
     def run_parameter_sweep(self, experiment, list_of_params, max_num_processes=1, num_gpus_per_process=None) -> None:
-        """Extends the :func:`pystematic.run_parameter_sweep` with GPU limiting capabilities.
+        """Extends the :func:`pystematic.run_parameter_sweep` with GPU limiting
+        capabilities.
 
-        Runs an experiment multiple times with a set of different params. At most
-        :obj:`max_num_processes` concurrent processes will be used. This call will block until 
-        all experiments have been run.
+        Runs an experiment multiple times with a set of different params. At
+        most :obj:`max_num_processes` concurrent processes will be used. This
+        call will block until all experiments have been run.
 
         Args:
             experiment (Experiment): The experiment to run.

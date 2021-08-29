@@ -280,8 +280,8 @@ class Context:
     def autotransform(self):
         """Transforms the context according to the current experiment
         parameters. More specifically it; loads a state_dict from the parameter
-        'checkpoint' if set, moves to cuda if paramter 'cuda' is set, moves to
-        distributed if parameter 'distributed' is set.
+        ``checkpoint`` if set, moves to cuda if paramter ``cuda`` is set, moves
+        to distributed if parameter ``distributed`` is set.
         """
         from pystematic import params
 
@@ -305,6 +305,7 @@ class SmartDataLoader(torch.utils.data.DataLoader):
         * A loading bar is displayed when iterating the dataloader.
         * The items yielded when iterating are moved to the device previously
           set with :meth:`to`.
+        * Transparently handles both distributed and non-distributed modes.
     """
 
     def __init__(self, dataset, shuffle=False, random_seed=None, move_output=True, loading_bar=True, **kwargs):
@@ -332,7 +333,7 @@ class SmartDataLoader(torch.utils.data.DataLoader):
         else:
             iterable = super().__iter__()
 
-        if self._move_output:
+        if self._move_output and self._device is not None:
             for item in iterable:
                 yield _move_to_device(item, self._device)
 
