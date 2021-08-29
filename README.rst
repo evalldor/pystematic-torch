@@ -28,6 +28,7 @@ training session in pytorch.
     @pystematic.experiment
     def context_example(params):
         ctx = pystematic.torch.Context()
+        ctx.epoch = 0
         ctx.recorder = pystematic.torch.Recorder()
 
         ctx.model = torch.nn.Sequential(
@@ -67,9 +68,11 @@ training session in pytorch.
 
             ctx.recorder.scalar("train/loss", loss)
             ctx.recorder.step()
+        
+        ctx.epoch += 1
 
         # Save checkpoint
-        pystematic.torch.save_checkpoint(ctx.state_dict(), id=1)
+        pystematic.torch.save_checkpoint(ctx.state_dict(), id=ctx.epoch)
 
 
 Documentation

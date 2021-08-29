@@ -87,6 +87,7 @@ Here is a short example showing how the Context may be used:
     @pystematic.experiment
     def context_example(params):
         ctx = pystematic.torch.Context()
+        ctx.epoch = 0
         ctx.recorder = pystematic.torch.Recorder()
 
         ctx.model = torch.nn.Sequential(
@@ -126,9 +127,11 @@ Here is a short example showing how the Context may be used:
 
             ctx.recorder.scalar("train/loss", loss)
             ctx.recorder.step()
+        
+        ctx.epoch += 1
 
         # Save checkpoint
-        pystematic.torch.save_checkpoint(ctx.state_dict(), id=1)
+        pystematic.torch.save_checkpoint(ctx.state_dict(), id=ctx.epoch)
 
 
 
