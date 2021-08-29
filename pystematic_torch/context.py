@@ -181,46 +181,6 @@ def _to_distributed_data_parallel(item):
 class Context:
     """
 
-    The :meth:`autotransform` method uses the parameters ``cuda``,
-    ``distributed``, ``checkpoint`` to automatically determine how the context
-    should be transformed. 
-    
-    The following list specifies the transformations applied to each type of
-    object:
-
-    :obj:`torch.nn.Module`: 
-
-    * cuda: moved to ``torch.cuda.current_device()``
-    * cpu: moved to cpu
-    * ddp: Gets wrapped in ``torch.nn.parallel.DistributedDataParallel`` and
-      then in an object proxy, that delegates all non-existing ``getattr()``
-      calls to the underlying module. This means that you should be able to use
-      any custom attributes and methods on the module, even after it get wrapped
-      in the DDP module.
-    
-    :obj:`torch.optim.Optimizer`:
-
-    * cuda, cpu, ddp: If an optimizer instance is encounterd any of these call
-      will raise an exception. The reason is that optimizers needs to be
-      initialized *after* the parameters have been placed on the correct.
-
-    :obj:`pystematic.torch.Recorder`:
-
-    * ddp: gets silenced on non master processes
-
-    :obj:`pystematic.torch.SmartDataLoader`:
-
-    * cuda, cpu: Moves the dataloader to the proper device. If you initialize
-      the dataloader with ``move_output = True``, the items yielded when
-      iterating the dataloader are moved to the correct device.
-
-    Any object with a method named ``to()`` (such as :obj:`torch.Tensor`):
-
-    * cuda, cpu, ddp: call the ``to()`` method with the device to move the
-      object to.
-
-    All other types of objects are left unchanged.
-
     """
 
     def __call__(self, 
@@ -315,7 +275,7 @@ class SmartDataLoader(torch.utils.data.DataLoader):
         self._device = None
 
     def to(self, device):
-        """Sets the device that yielded items should be placed on.
+        """Sets the device that yielded items should be placed on when iterating.
 
         Args:
             device (str, torch.Device): The device to move the items to.
