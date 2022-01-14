@@ -292,8 +292,31 @@ class SmartDataLoader(torch.utils.data.DataLoader):
         * Transparently handles both distributed and non-distributed modes.
     """
 
-    def __init__(self, dataset, shuffle=False, random_seed=None, move_output=True, loading_bar=True, **kwargs):
-        super().__init__(dataset, sampler=create_sampler(dataset, shuffle, random_seed), **kwargs)
+    def __init__(self, dataset, shuffle=False, random_seed=None, sampler=None, move_output=True, loading_bar=True, **kwargs):
+        """Constructor for SmartDataLoader
+
+        Args:
+            dataset (torch.utils.data.Dataset): The dataset to construct a loader for
+
+            shuffle (bool, optional): Whether to shuffle the data when loading. 
+                Ignored if :param:`sampler` is not None. Defaults to False.
+
+            random_seed (int, optional): Random seed to use when shuffleing data. Ignored 
+                if :param:`sampler` is not None. Defaults to None.
+
+            sampler (torch.utils.data.Sampler, Iterable, optional): An object defining how 
+                to sample data items. Defaults to None.
+
+            move_output (bool, optional): If items yielded during iteration automatically 
+                should be moved to the curent device. Defaults to True.
+
+            loading_bar (bool, optional): If a loading bar should be displayed during 
+                iteration. Defaults to True.
+        """
+        if sampler is None:
+            sampler = create_sampler(dataset, shuffle, random_seed)
+
+        super().__init__(dataset, sampler=sampler, **kwargs)
         self._move_output = move_output
         self._show_loading_bar = loading_bar
         self._device = None
@@ -351,7 +374,7 @@ def create_sampler(dataset, shuffle=True, seed=None):
 
 class BetterDistributedSampler(torch.utils.data.distributed.DistributedSampler):
     """This class extends torch's default DistributedSampler but removes the need
-    for manually calling the set_epoch method to reseed the random sampler
+    for manually calling the set_epoch method to reseed the random generator
     """
     def __init__(self, dataset, shuffle=True, seed=None):
         super().__init__(dataset, shuffle=shuffle, seed=seed)
