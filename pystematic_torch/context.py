@@ -293,16 +293,15 @@ class SmartDataLoader(torch.utils.data.DataLoader):
     """
 
     def __init__(self, dataset, shuffle=False, random_seed=None, sampler=None, move_output=True, loading_bar=True, **kwargs):
-        """Constructor for SmartDataLoader
-
+        """
         Args:
             dataset (torch.utils.data.Dataset): The dataset to construct a loader for
 
             shuffle (bool, optional): Whether to shuffle the data when loading. 
-                Ignored if :param:`sampler` is not None. Defaults to False.
+                Ignored if ``sampler`` is not None. Defaults to False.
 
             random_seed (int, optional): Random seed to use when shuffleing data. Ignored 
-                if :param:`sampler` is not None. Defaults to None.
+                if ``sampler`` is not None. Defaults to None.
 
             sampler (torch.utils.data.Sampler, Iterable, optional): An object defining how 
                 to sample data items. Defaults to None.
