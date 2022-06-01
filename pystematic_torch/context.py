@@ -292,7 +292,7 @@ class SmartDataLoader(torch.utils.data.DataLoader):
         * Transparently handles both distributed and non-distributed modes.
     """
 
-    def __init__(self, dataset, shuffle=False, random_seed=None, sampler=None, move_output=True, loading_bar=True, **kwargs):
+    def __init__(self, dataset, shuffle=False, random_seed=None, sampler=None, batch_sampler=None, move_output=True, loading_bar=True, **kwargs):
         """
         Args:
             dataset (torch.utils.data.Dataset): The dataset to construct a loader for
@@ -312,10 +312,13 @@ class SmartDataLoader(torch.utils.data.DataLoader):
             loading_bar (bool, optional): If a loading bar should be displayed during 
                 iteration. Defaults to True.
         """
-        if sampler is None:
+
+
+        if batch_sampler is None and sampler is None:
             sampler = create_sampler(dataset, shuffle, random_seed)
 
-        super().__init__(dataset, sampler=sampler, **kwargs)
+        super().__init__(dataset, sampler=sampler, batch_sampler=batch_sampler, **kwargs)
+        
         self._move_output = move_output
         self._show_loading_bar = loading_bar
         self._device = None
