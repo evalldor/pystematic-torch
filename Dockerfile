@@ -6,6 +6,8 @@ COPY / /pystematic-torch/
 
 RUN pip install poetry
 
+RUN rm /pystematic-torch/poetry.lock
+
 RUN poetry install
 
 ENTRYPOINT ["poetry", "run", "pytest", "-s"]
