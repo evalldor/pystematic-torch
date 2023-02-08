@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
         
-      - uses: abatilo/actions-poetry@8284d202bc272a8d0597e26e1c0b4a0d0c73db93
+      - uses: abatilo/actions-poetry@v2
       
       - name: Remove lockfile
         run: rm poetry.lock

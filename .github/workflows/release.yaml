@@ -49,7 +49,7 @@ jobs:
         with:
           python-version: 3.8
         
-      - uses: abatilo/actions-poetry@8284d202bc272a8d0597e26e1c0b4a0d0c73db93
+      - uses: abatilo/actions-poetry@v2
       
       - name: Install dependencies
         run: poetry install
