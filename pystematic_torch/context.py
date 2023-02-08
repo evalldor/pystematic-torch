@@ -378,7 +378,10 @@ class BetterDistributedSampler(torch.utils.data.distributed.DistributedSampler):
     """This class extends torch's default DistributedSampler but removes the need
     for manually calling the set_epoch method to reseed the random generator
     """
-    def __init__(self, dataset, shuffle=True, seed=0):
+    def __init__(self, dataset, shuffle=True, seed=None):
+        if seed is None:
+            seed = 0
+        
         super().__init__(dataset, shuffle=shuffle, seed=seed)
         self.epoch = 0
 
