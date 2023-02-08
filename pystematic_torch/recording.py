@@ -245,7 +245,7 @@ class FileBackend(RecorderBackend):
 
         if isinstance(image, np.ndarray):
             
-            if len(image.squeeze().shape()) < 2 or len(image.squeeze().shape()) > 3:
+            if len(image.squeeze().shape) < 2 or len(image.squeeze().shape) > 3:
                 raise ValueError(f"Invalid image shape '{image.shape}' must have 2 or 3 non-singleton dimensions.")
             
             image = image.squeeze()
